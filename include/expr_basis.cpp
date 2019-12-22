@@ -6,38 +6,39 @@
 
 class ExpBasis {
 public:
-	Param<double> px, py, pz;
-	Param<double> ux, uy, uz;
-	Param<double> vx, vy, vz;
-	Param<double> nx, ny, nz;
-
-	ExpVector u;
-	ExpVector v;
-	ExpVector n;
-	ExpVector p;
+	std::shared_ptr<Param<double>> px, py, pz,
+								   ux, uy, uz,
+								   vx, vy, vz,
+								   nx, ny, nz;
+	ExpVector p, u, v, n;
 
 	ExpBasis() :
-		px("px", 0.0),
-		py("py", 0.0),
-		pz("pz", 0.0),
-		ux("ux", 1.0),
-		uy("uy", 0.0),
-		uz("uz", 0.0),
-		vx("vx", 0.0),
-		vy("vy", 1.0),
-		vz("vz", 0.0),
-		nx("nx", 0.0),
-		ny("ny", 0.0),
-		nz("nz", 1.0),
-		p(px.expr(), py.expr(), pz.expr()),
-		u(ux.expr(), uy.expr(), uz.expr()),
-		v(vx.expr(), vy.expr(), vz.expr()),
-		n(nx.expr(), ny.expr(), nz.expr())
+		ExpBasis({0., 0., 0., // pxyz
+			      1., 0., 0., // uxyz
+			  	  0., 1., 0., // vxyz
+			  	  0., 0., 1.  // nxyz
+		})
 	{
-		// why px == ux?
-		// px = new Param("ux", 0.0);
-		// py = new Param("uy", 0.0);
-		// pz = new Param("uz", 0.0);
+	}
+
+	ExpBasis(const double (&params)[12]) :
+		px(param("px", params[0])),
+		py(param("py", params[1])),
+		pz(param("pz", params[2])),
+		ux(param("ux", params[3])),
+		uy(param("uy", params[4])),
+		uz(param("uz", params[5])),
+		vx(param("vx", params[6])),
+		vy(param("vy", params[7])),
+		vz(param("vz", params[8])),
+		nx(param("nx", params[9])),
+		ny(param("ny", params[10])),
+		nz(param("nz", params[11])),
+		p(px->expr(), py->expr(), pz->expr()),
+		u(ux->expr(), uy->expr(), uz->expr()),
+		v(vx->expr(), vy->expr(), vz->expr()),
+		n(nx->expr(), ny->expr(), nz->expr())
+	{
 	}
 
 	// public Matrix4x4 matrix {
@@ -47,7 +48,7 @@ public:
 	// }
 
 	template <class L>
-	void apply(L&& l)
+	void apply_each_param(L&& l)
 	{
 		l(ux);
 		l(uy);
@@ -65,21 +66,19 @@ public:
 
 	std::string to_string() {
 		std::string result = "";
-		apply([&result](auto& p) {
-			result += std::to_string(p.value()) + " ";
+		apply_each_param([&result](auto& p) {
+			result += std::to_string(p->value()) + " ";
 		});
 		return result;
 	}
 
-	// public void FromString(string str) {
-	// 	char[] sep = { ' ' };
-	// 	var values = str.Split(sep, StringSplitOptions.RemoveEmptyEntries);
-	// 	int i = 0;
-	// 	foreach(var p in parameters) {
-	// 		p.value = values[i].ToDouble();
-	// 		i++;
-	// 	}
-	// }
+	static ExpBasis FromString(const std::string& str)
+	{
+		std::istringstream iss(str);
+		double p[12];
+		for (std::size_t i = 0; i < 12; ++i) iss >> p[i];
+		return ExpBasis(p);
+	}
 
 	ExpVector transform_position(const ExpVector& pos) {
 		return pos.x * u + pos.y * v + pos.z * n + p;
@@ -90,7 +89,7 @@ public:
 	}
 
 	void generate_equations(EquationSystem& sys) {
-		apply([&sys](auto& p) {
+		apply_each_param([&sys](auto& p) {
 			sys.add_parameter(p);
 		});
 
@@ -106,8 +105,8 @@ public:
 	bool changed()
 	{
 		bool changed = false;
-		apply([&changed](auto& p) {
-			if (!changed && p.m_changed)
+		apply_each_param([&changed](auto& p) {
+			if (!changed && p->m_changed)
 			{
 				changed = true;
 			}
@@ -116,41 +115,45 @@ public:
 	}
 
 	void mark_unchanged() {
-		apply([](auto& p) {
-			p.m_changed = false;
+		apply_each_param([](auto& p) {
+			p->m_changed = false;
 		});
 	}
 };
 
 class ExpBasis2d {
-	Param<double> px, py;
-	Param<double> ux, uy;
-	Param<double> vx, vy;
-
+	std::shared_ptr<Param<double>> px, py,
+								   ux, uy,
+								   vx, vy;
 	ExpVector u, v, p;
 
 	ExpBasis2d() :
-		px("px", 0.0),
-		py("py", 0.0),
-		ux("ux", 1.0),
-		uy("uy", 0.0),
-		vx("vx", 0.0),
-		vy("vy", 1.0),
-		p(px.expr(), py.expr(), zero),
-		u(ux.expr(), uy.expr(), zero),
-		v(vx.expr(), vy.expr(), zero)
+		ExpBasis2d({0., 0., 1., 0., 0. , 1.})
 	{
 	}
 
-	void set_pose_param(const Param<double>& x, const Param<double>& y) {
+	ExpBasis2d(const double (&params)[6]) :
+		px(param("px", params[0])),
+		py(param("py", params[1])),
+		ux(param("ux", params[2])),
+		uy(param("uy", params[3])),
+		vx(param("vx", params[4])),
+		vy(param("vy", params[5])),
+		p(px->expr(), py->expr(), zero),
+		u(ux->expr(), uy->expr(), zero),
+		v(vx->expr(), vy->expr(), zero)
+	{
+	}
+
+	void set_pose_param(const std::shared_ptr<Param<double>>& x, const std::shared_ptr<Param<double>>& y) {
 		px = x;
 		py = y;
-		p.x = px.expr();
-		p.y = py.expr();
+		p.x = px->expr();
+		p.y = py->expr();
 	}
 
 	template <class L>
-	void apply(L&& l)
+	void apply_each_param(L&& l)
 	{
 		l(px);
 		l(py);
@@ -170,21 +173,19 @@ class ExpBasis2d {
 	std::string to_string()
 	{
 		std::string result = "";
-		apply([&result](auto& p) {
-			result += std::to_string(p.value()) + " ";
+		apply_each_param([&result](auto& p) {
+			result += std::to_string(p->value()) + " ";
 		});
 		return result;
 	}
 
-// 	public void FromString(string str) {
-// 		char[] sep = { ' ' };
-// 		var values = str.Split(sep, StringSplitOptions.RemoveEmptyEntries);
-// 		int i = 0;
-// 		foreach(var p in parameters) {
-// 			p.value = values[i].ToDouble();
-// 			i++;
-// 		}
-// 	}
+	static ExpBasis2d from_string(const std::string& str)
+	{
+		std::istringstream iss(str);
+		double p[6];
+		iss >> p[0] >> p[1] >> p[2] >> p[3] >> p[4] >> p[5];
+		return ExpBasis2d(p);
+	}
 
 	ExpVector transform_position(const ExpVector& pos) {
 		return pos.x * u + pos.y * v + p;
@@ -196,7 +197,7 @@ class ExpBasis2d {
 
 	void generate_equations(EquationSystem& sys)
 	{
-		apply([&sys](auto& p) {
+		apply_each_param([&sys](auto& p) {
 			sys.add_parameter(p);
 		});
 		sys.add_equation(u.magnitude() - one);
@@ -210,8 +211,8 @@ class ExpBasis2d {
 	bool changed()
 	{
 		bool changed = false;
-		apply([&changed](auto& p) {
-			if (!changed && p.m_changed)
+		apply_each_param([&changed](auto& p) {
+			if (!changed && p->m_changed)
 			{
 				changed = true;
 			}
@@ -220,8 +221,8 @@ class ExpBasis2d {
 	}
 
 	void mark_unchanged() {
-		apply([](auto& p) {
-			p.m_changed = false;
+		apply_each_param([](auto& p) {
+			p->m_changed = false;
 		});
 	}
 };

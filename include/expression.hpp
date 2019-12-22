@@ -7,7 +7,14 @@
 class Expr;
 
 template <class T>
+class Param;
+
+// using ParamPtr = std::shared_ptr<Param<double>>;
+// using ExprPtr = std::shared_ptr<Expr>;
+
+template <class T>
 class Param
+	: public std::enable_shared_from_this<Param<T>>
 {
 private:
 	T m_value;
@@ -46,6 +53,9 @@ T Param<T>::value() const {
 template <class T>
 std::shared_ptr<Expr> Param<T>::expr()
 {
+	if (m_expr == nullptr) {
+		m_expr = std::make_shared<Expr>(this->shared_from_this());
+	}
 	return m_expr;
 }
 
@@ -53,41 +63,18 @@ template <class T>
 Param<T>::Param(const std::string& name, bool reduceable /* = true */)
 	: m_name(name), m_reduceable(reduceable)
 {
-	m_expr = std::make_shared<Expr>(this);
 }
 
 template <class T>
 Param<T>::Param(const std::string& name, double value)
 	: m_name(name), m_value(value)
 {
-	m_expr = std::make_shared<Expr>(this);
 }
 
-template <class T>
-bool Param<T>::operator==(const Param& other) const
+inline std::shared_ptr<Param<double>> param(const std::string& name, double value)
 {
-	return m_name == other.m_name;
+	return std::make_shared<Param<double>>(name, value);
 }
-
-namespace std {
-
-  template <>
-  struct hash<Param<double>>
-  {
-    std::size_t operator()(const Param<double>& k) const
-    {
-      // Compute individual hash values for first,
-      // second and third and combine them using XOR
-      // and bit shifting:
-        return std::hash<std::string>()(k.m_name);
-      // return ((hash<string>()(k.first)
-      //          ^ (hash<string>()(k.second) << 1)) >> 1)
-      //          ^ (hash<int>()(k.third) << 1);
-    }
-  };
-
-}
-
 
 enum Op {
 	Undefined,
@@ -117,7 +104,6 @@ enum Op {
 	//Pow,
 };
 
-
 class Expr
 	: public std::enable_shared_from_this<Expr>
 {
@@ -126,14 +112,15 @@ public:
 
 	std::shared_ptr<Expr> a;
 	std::shared_ptr<Expr> b;
-	Param<double>* param;
+	std::shared_ptr<Param<double>> param;
 	double value;
+
 	Expr() = default;
 
 	// Todo automatic conversion from double?!
 	Expr(double value);
 
-	Expr(Param<double>* p);
+	Expr(std::shared_ptr<Param<double>> p);
 
 	Expr(const Op& op, const std::shared_ptr<Expr>& a, const std::shared_ptr<Expr>& b);
 
@@ -157,17 +144,17 @@ public:
 	std::string quoted();
 	std::string quoted_add();
 	std::string to_string();
-	bool is_dependend_on(const Param<double>& p);
-	std::shared_ptr<Expr> derivative(const Param<double>& p);
-	std::shared_ptr<Expr> d(const Param<double>& p);
+	bool is_dependend_on(const std::shared_ptr<Param<double>>& p);
+	std::shared_ptr<Expr> derivative(const std::shared_ptr<Param<double>>& p);
+	std::shared_ptr<Expr> d(const std::shared_ptr<Param<double>>& p);
 
 	bool is_substitution_form() const;
 
-	Param<double>* get_substitution_param_a() const;
-	Param<double>* get_substitution_param_b() const;
+	std::shared_ptr<Param<double>> get_substitution_param_a() const;
+	std::shared_ptr<Param<double>> get_substitution_param_b() const;
 
-	void substitute(Param<double>& pa, Param<double>& pb);
-	void substitute(Param<double>& p, std::shared_ptr<Expr> e);
+	void substitute(std::shared_ptr<Param<double>>& pa, std::shared_ptr<Param<double>>& pb);
+	void substitute(std::shared_ptr<Param<double>>& p, std::shared_ptr<Expr> e);
 
 	bool has_two_operands() const;
 	Op get_op() const;
