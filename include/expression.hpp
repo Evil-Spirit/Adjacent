@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <cmath>
 
 class Expr;
 
@@ -11,6 +12,12 @@ class Param;
 
 // using ParamPtr = std::shared_ptr<Param<double>>;
 // using ExprPtr = std::shared_ptr<Expr>;
+
+template <typename T>
+inline int sign(T val)
+{
+    return (T(0) < val) - (val < T(0));
+}
 
 template <class T>
 class Param : public std::enable_shared_from_this<Param<T>>
@@ -190,5 +197,53 @@ std::shared_ptr<Expr> sinh(const std::shared_ptr<Expr>& x);
 std::shared_ptr<Expr> cosh(const std::shared_ptr<Expr>& x);
 std::shared_ptr<Expr> sfres(const std::shared_ptr<Expr>& x);
 std::shared_ptr<Expr> cfres(const std::shared_ptr<Expr>& x);
+
+// https://www.hindawi.com/journals/mpe/2018/4031793/
+inline double c_fres(double x)
+{
+    double PI = M_PI;
+    double ax = std::abs(x);
+    double ax2 = ax * ax;
+    double ax3 = ax2 * ax;
+    double x3 = x * x * x;
+    /*
+    return (
+        -Math.Sin(PI * ax2 / 2.0) /
+        (PI * (x + 20.0 * PI * Math.Exp(-200.0 * PI * Math.Sqrt(ax))))
+
+        + 8.0 / 25.0 * (1.0 - Math.Exp(-69.0 / 100.0     * PI * x3))
+        + 2.0 / 25.0 * (1.0 - Math.Exp(-9.0 / 2.0        * PI * ax2))
+        + 1.0 / 10.0 * (1.0 - Math.Exp(-1.55294068198794 * PI * x ))
+    ) * Math.Sign(x);
+
+    */
+    return sign(x)
+           * (1.0 / 2.0
+              + ((1 + 0.926 * ax) / (2 + 1.792 * ax + 3.104 * ax2)) * std::sin(M_PI * ax2 / 2)
+              - (1 / (2 + 4.142 * ax + 3.492 * ax2 + 6.67 * ax3)) * std::cos(M_PI * ax2 / 2));
+}
+
+inline double s_fres(double x)
+{
+    double PI = M_PI;
+    double ax = std::abs(x);
+    double ax2 = ax * ax;
+    double ax3 = ax2 * ax;
+
+    /*
+    return (
+        -Math.Cos(PI * ax2 / 2.0) /
+        (PI * (ax + 16.7312774552827 * PI * Math.Exp(-1.57638860756614 * PI * Math.Sqrt(ax))))
+
+        + 8.0 / 25.0 * (1.0 - Math.Exp(-0.608707749430681 * PI * ax3))
+        + 2.0 / 25.0 * (1.0 - Math.Exp(-1.71402838165388  * PI * ax2))
+        + 1.0 / 10.0 * (1.0 - Math.Exp(-9.0 / 10.0        * PI * ax ))
+    ) * Math.Sign(x);
+    */
+    return sign(x)
+           * (1.0 / 2.0
+              - ((1 + 0.926 * ax) / (2 + 1.792 * ax + 3.104 * ax2)) * std::cos(M_PI * ax2 / 2)
+              - (1 / (2 + 4.142 + 3.492 * ax2 + 6.67 * ax3)) * std::sin(M_PI * ax2 / 2));
+}
 
 #endif

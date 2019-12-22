@@ -9,9 +9,11 @@ ExpVector::ExpVector(const std::shared_ptr<Expr>& x, const std::shared_ptr<Expr>
 }
 
 // constructor from eigen etc.
-const ExpVector(const double (&v)[3])
+ExpVector::ExpVector(const double (&v)[3])
+    : x(expr(v[0]))
+    , y(expr(v[1]))
+    , z(expr(v[2]))
 {
-    return ExpVector(v[0], v[1], v[2]);
 }
 
 std::shared_ptr<Expr> ExpVector::magnitude() const

@@ -23,6 +23,8 @@ class ExpVector
 public:
     std::shared_ptr<Expr> x, y, z;
 
+    ExpVector() = default;
+    ExpVector(const double (&v)[3]);
     ExpVector(const std::shared_ptr<Expr>& x, const std::shared_ptr<Expr>& y,
               const std::shared_ptr<Expr>& z);
 

@@ -10,6 +10,6 @@ add_executable(adjacent
 	src/expression_vector.cpp
 	src/gaussian_method.cpp
 	src/equation_system.cpp
-	include/expr_basis.cpp
+	src/expr_basis.cpp
 
 	src/test.cpp)

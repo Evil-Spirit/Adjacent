@@ -260,8 +260,8 @@ double Expr::eval()
             return std::atan2(a->eval(), b->eval());
         case Op::Abs:
             return std::abs(a->eval());
-        // TODO figure out sign
-        // case Op::Sign:   return std::sign(a->eval());
+        case Op::Sign:
+            return sign(a->eval());
         case Op::Neg:
             return -a->eval();
         case Op::Pos:
@@ -272,8 +272,10 @@ double Expr::eval()
             return std::sinh(a->eval());
         case Op::Cosh:
             return std::cosh(a->eval());
-            // case Op::SFres:  return sfres(a->eval());
-            // case Op::CFres:  return cfres(a->eval());
+        case Op::SFres:
+            return s_fres(a->eval());
+        case Op::CFres:
+            return c_fres(a->eval());
             // case Op::Pow: return std::Pow(a.Eval(), b.Eval());
     }
     return 0.0;
