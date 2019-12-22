@@ -3,37 +3,19 @@
 
 #include <xtensor/xtensor.hpp>
 
-class GaussianMethod {
-
+class GaussianMethod
+{
 public:
-	static constexpr double epsilon = 1e-10;
-	static constexpr double rankEpsilon = 1e-8;
+    static constexpr double epsilon = 1e-10;
+    static constexpr double rank_epsilon = 1e-8;
 
-	// public static string Print<T>(this T[,] A) {
-	// 	string result = "";
-	// 	for(int r = 0; r < A.GetLength(0); r++) {
-	// 		for(int c = 0; c < A.GetLength(1); c++) {
-	// 			result += A[r, c].ToString() + " ";
-	// 		}
-	// 		result += "\n";
-	// 	}
-	// 	return result;
-	// }
+    // copy A so it doesn't get overwritten
+    // note: could use xt::linalg::rank
+    static int rank(xt::xtensor<double, 2> A);
 
-	// public static string Print<T>(this T[] A) {
-	// 	string result = "";
-	// 	for(int r = 0; r < A.GetLength(0); r++) {
-	// 		result += A[r].ToString() + "\n";
-	// 	}
-	// 	return result;
-	// }
-
-	// copy A so it doesn't get overwritten
-	// note: could use xt::linalg::rank
-	static int rank(xt::xtensor<double, 2> A);
-
-	// copy A & B so they don't get overwritten
-	static void solve(xt::xtensor<double, 2> A, xt::xtensor<double, 1> B, xt::xtensor<double, 1>& X);
+    // copy A & B so they don't get overwritten
+    static void solve(xt::xtensor<double, 2> A, xt::xtensor<double, 1> B,
+                      xt::xtensor<double, 1>& X);
 };
 
 #endif

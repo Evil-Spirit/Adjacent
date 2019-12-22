@@ -9,92 +9,79 @@
 #include "expression_vector.hpp"
 #include "gaussian_method.hpp"
 
-enum SolveResult {
-	OKAY,
-	DIDNT_CONVERGE,
-	REDUNDANT,
-	POSTPONE
+enum SolveResult
+{
+    OKAY,
+    DIDNT_CONVERGE,
+    REDUNDANT,
+    POSTPONE
 };
 
 using expr_ptr = std::shared_ptr<Expr>;
 
-class EquationSystem  {
-
+class EquationSystem
+{
 public:
-	bool is_dirty = true;
-	int max_steps = 20;
-	int drag_steps = 3;
-	bool revert_when_not_converged = true;
+    bool is_dirty = true;
+    int max_steps = 20;
+    int drag_steps = 3;
+    bool revert_when_not_converged = true;
 
-	std::string stats;
-	bool dof_changed;
+    std::string stats;
+    bool dof_changed;
 
+    xt::xtensor<std::shared_ptr<Expr>, 2> J;
+    xt::xtensor<double, 2> A;
+    xt::xtensor<double, 2> AAT;
+    xt::xtensor<double, 1> B;
+    xt::xtensor<double, 1> X;
+    xt::xtensor<double, 1> Z;
+    xt::xtensor<double, 1> old_param_value;
 
-	xt::xtensor<std::shared_ptr<Expr>, 2> J;
-	xt::xtensor<double, 2> A;
-	xt::xtensor<double, 2> AAT;
-	xt::xtensor<double, 1> B;
-	xt::xtensor<double, 1> X;
-	xt::xtensor<double, 1> Z;
-	xt::xtensor<double, 1> old_param_value;
+    std::vector<std::shared_ptr<Expr>> source_equations;
+    std::vector<std::shared_ptr<Param<double>>> parameters;
 
-	std::vector<std::shared_ptr<Expr>> source_equations;
-	std::vector<std::shared_ptr<Param<double>>> parameters;
+    std::vector<std::shared_ptr<Expr>> equations;
+    std::vector<std::shared_ptr<Param<double>>> current_params;
 
-	std::vector<std::shared_ptr<Expr>> equations;
-	std::vector<std::shared_ptr<Param<double>>> current_params;
+    std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> subs;
 
-	std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> subs;
+    void add_equation(const std::shared_ptr<Expr>& eq);
+    void add_equation(const ExpVector& v);
 
-	void add_equation(const std::shared_ptr<Expr>& eq);
-	void add_equation(const ExpVector& v);
+    void remove_equation(const std::shared_ptr<Expr>& eq);
 
-	// public void AddEquations(IEnumerable<Exp> eq) {
-	// 	source_equations.AddRange(eq);
-	// 	is_dirty = true;
-	// }
+    void add_parameter(const std::shared_ptr<Param<double>>& p);
 
-	// public void RemoveEquation(Exp eq) {
-	// 	source_equations.Remove(eq);
-	// 	is_dirty = true;
-	// }
+    void remove_parameter(const std::shared_ptr<Param<double>>& p);
 
-	void add_parameter(const std::shared_ptr<Param<double>>& p);
+    void eval(xt::xtensor<double, 1>& B, bool clear_drag);
 
-	// public void AddParameters(IEnumerable<Param> p) {
-	// 	parameters.AddRange(p);
-	// 	is_dirty = true;
-	// }
+    bool is_converged(bool check_drag, bool print_non_converged = false);
+    void store_params();
+    void revert_params();
 
-	// public void RemoveParameter(Param p) {
-	// 	parameters.Remove(p);
-	// 	is_dirty = true;
-	// }
+    xt::xtensor<std::shared_ptr<Expr>, 2> write_jacobian(
+        const std::vector<std::shared_ptr<Expr>>& equations,
+        const std::vector<std::shared_ptr<Param<double>>>& parameters);
 
-	void eval(xt::xtensor<double, 1>& B, bool clear_drag);
+    bool has_dragged();
+    void eval_jacobian(const xt::xtensor<expr_ptr, 2>& J, xt::xtensor<double, 2>& A,
+                       bool clear_drag);
+    void solve_least_squares(const xt::xtensor<double, 2>& A, const xt::xtensor<double, 1>& B,
+                             xt::xtensor<double, 1>& X);
+    void clear();
 
-	bool is_converged(bool check_drag, bool print_non_converged = false);
-	void store_params();
-	void revert_params();
+    bool test_rank(int& dof);
 
-	xt::xtensor<std::shared_ptr<Expr>, 2> write_jacobian(const std::vector<std::shared_ptr<Expr>>& equations,
-												         const std::vector<std::shared_ptr<Param<double>>>& parameters);
+    void update_dirty();
 
-	bool has_dragged();
-	void eval_jacobian(const xt::xtensor<expr_ptr, 2>& J, xt::xtensor<double, 2>& A, bool clear_drag);
-	void solve_least_squares(const xt::xtensor<double, 2>& A,
-									const xt::xtensor<double, 1>& B,
-									xt::xtensor<double, 1>& X);
-	void clear();
+    void back_substitution(
+        std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>>& subs);
+    std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>>
+    solve_by_substitution();
 
-	bool test_rank(int& dof);
-
-	void update_dirty();
-
-	void back_substitution(std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>>& subs);
-	std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> solve_by_substitution();
-
-	SolveResult solve();
+    SolveResult solve();
 };
 
 #endif
