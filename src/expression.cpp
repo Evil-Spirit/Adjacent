@@ -67,7 +67,7 @@ Expr::Expr(double value) :
 {
 }
 
-Expr::Expr(Param<double>* p)
+Expr::Expr(std::shared_ptr<Param<double>> p)
 	: param(p), op(Op::ParamOp)
 {
 }
@@ -221,8 +221,8 @@ std::string Expr::to_string() {
 	return "";
 }
 
-bool Expr::is_dependend_on(const Param<double>& p) {
-	if(op == Op::ParamOp) return *param == p;
+bool Expr::is_dependend_on(const std::shared_ptr<Param<double>>& p) {
+	if(op == Op::ParamOp) return param == p;
 	if(a != nullptr) {
 		if(b != nullptr) {
 			return a->is_dependend_on(p) || b->is_dependend_on(p);
@@ -232,14 +232,14 @@ bool Expr::is_dependend_on(const Param<double>& p) {
 	return false;
 }
 
-std::shared_ptr<Expr> Expr::derivative(const Param<double>& p) {
+std::shared_ptr<Expr> Expr::derivative(const std::shared_ptr<Param<double>>& p) {
 	return d(p);
 }
 
-std::shared_ptr<Expr> Expr::d(const Param<double>& p) {
+std::shared_ptr<Expr> Expr::d(const std::shared_ptr<Param<double>>& p) {
 	switch(op) {
 		case Op::Const: return zero;
-		case Op::ParamOp: return (*param == p) ? one : zero;
+		case Op::ParamOp: return (param == p) ? one : zero;
 		case Op::Add: return a->d(p) + b->d(p);
 		case Op::Drag:
 		case Op::Sub: return a->d(p) - b->d(p);
@@ -273,17 +273,17 @@ bool Expr::is_substitution_form() const {
 	return op == Op::Sub && a->op == Op::ParamOp && b->op == Op::ParamOp;
 }
 
-Param<double>* Expr::get_substitution_param_a() const {
+std::shared_ptr<Param<double>> Expr::get_substitution_param_a() const {
 	if (!is_substitution_form()) return nullptr;
 	return a->param;
 }
 
-Param<double>* Expr::get_substitution_param_b() const {
+std::shared_ptr<Param<double>> Expr::get_substitution_param_b() const {
 	if (!is_substitution_form()) return nullptr;
 	return b->param;
 }
 
-void Expr::substitute(Param<double>& pa, Param<double>& pb)
+void Expr::substitute(std::shared_ptr<Param<double>>& pa, std::shared_ptr<Param<double>>& pb)
 {
 	if(a != nullptr)
 	{
@@ -295,15 +295,15 @@ void Expr::substitute(Param<double>& pa, Param<double>& pb)
 	}
 	else
 	{
-		if(op == Op::ParamOp && *param == pa)
+		if(op == Op::ParamOp && param == pa)
 		{
 			// TODO make memory management better
-			param = &pb;
+			param = pb;
 		}
 	}
 }
 
-void Expr::substitute(Param<double>& p, std::shared_ptr<Expr> e)
+void Expr::substitute(std::shared_ptr<Param<double>>& p, std::shared_ptr<Expr> e)
 {
 	if(a != nullptr)
 	{
@@ -315,7 +315,7 @@ void Expr::substitute(Param<double>& p, std::shared_ptr<Expr> e)
 	} 
 	else
 	{
-		if(op == Op::ParamOp && *param == p)
+		if(op == Op::ParamOp && param == p)
 		{
 			op = e->op;
 			a = e->a;

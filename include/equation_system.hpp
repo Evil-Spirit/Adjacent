@@ -39,12 +39,12 @@ public:
 	xt::xtensor<double, 1> old_param_value;
 
 	std::vector<std::shared_ptr<Expr>> source_equations;
-	std::vector<Param<double>> parameters;
+	std::vector<std::shared_ptr<Param<double>>> parameters;
 
 	std::vector<std::shared_ptr<Expr>> equations;
-	std::vector<Param<double>> current_params;
+	std::vector<std::shared_ptr<Param<double>>> current_params;
 
-	std::unordered_map<Param<double>, Param<double>> subs;
+	std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> subs;
 
 	void add_equation(const std::shared_ptr<Expr>& eq);
 	void add_equation(const ExpVector& v);
@@ -59,7 +59,7 @@ public:
 	// 	is_dirty = true;
 	// }
 
-	void add_parameter(const Param<double>& p);
+	void add_parameter(const std::shared_ptr<Param<double>>& p);
 
 	// public void AddParameters(IEnumerable<Param> p) {
 	// 	parameters.AddRange(p);
@@ -78,7 +78,7 @@ public:
 	void revert_params();
 
 	xt::xtensor<std::shared_ptr<Expr>, 2> write_jacobian(const std::vector<std::shared_ptr<Expr>>& equations,
-												         const std::vector<Param<double>>& parameters);
+												         const std::vector<std::shared_ptr<Param<double>>>& parameters);
 
 	bool has_dragged();
 	void eval_jacobian(const xt::xtensor<expr_ptr, 2>& J, xt::xtensor<double, 2>& A, bool clear_drag);
@@ -91,8 +91,8 @@ public:
 
 	void update_dirty();
 
-	void back_substitution(std::unordered_map<Param<double>, Param<double>>& subs);
-	std::unordered_map<Param<double>, Param<double>> solve_by_substitution();
+	void back_substitution(std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>>& subs);
+	std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> solve_by_substitution();
 
 	SolveResult solve();
 };

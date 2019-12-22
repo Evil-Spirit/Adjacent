@@ -30,7 +30,7 @@ void EquationSystem::add_equation(const ExpVector& v) {
 // 	is_dirty = true;
 // }
 
-void EquationSystem::add_parameter(const Param<double>& p)
+void EquationSystem::add_parameter(const std::shared_ptr<Param<double>>& p)
 {
 	parameters.push_back(p);
 	is_dirty = true;
@@ -79,18 +79,20 @@ bool EquationSystem::is_converged(bool check_drag, bool print_non_converged /* =
 
 void EquationSystem::store_params() {
 	for(std::size_t i = 0; i < parameters.size(); i++) {
-		old_param_value[i] = parameters[i].value();
+		old_param_value[i] = parameters[i]->value();
 	}
 }
 
 void EquationSystem::revert_params() {
 	for(std::size_t i = 0; i < parameters.size(); i++) {
-		parameters[i].set_value(old_param_value[i]);
+		parameters[i]->set_value(old_param_value[i]);
 	}
 }
 
-xt::xtensor<std::shared_ptr<Expr>, 2> EquationSystem::write_jacobian(const std::vector<std::shared_ptr<Expr>>& equations,
-											         const std::vector<Param<double>>& parameters) {
+xt::xtensor<std::shared_ptr<Expr>, 2> EquationSystem::write_jacobian(
+	const std::vector<std::shared_ptr<Expr>>& equations,
+	const std::vector<std::shared_ptr<Param<double>>>& parameters)
+{
 	xt::xtensor<std::shared_ptr<Expr>, 2> J = xt::empty<std::shared_ptr<Expr>>({equations.size(), parameters.size()});
 	for(std::size_t r = 0; r < equations.size(); r++) {
 		const auto& eq = equations[r];
@@ -198,27 +200,28 @@ void EquationSystem::update_dirty() {
 	}
 }
 
-void EquationSystem::back_substitution(std::unordered_map<Param<double>, Param<double>>& subs) {
+void EquationSystem::back_substitution(std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>>& subs) {
 	if(subs.empty()) return;
 	for(std::size_t i = 0; i < parameters.size(); i++) {
 		auto& p = parameters[i];
 		if(subs.find(p) == subs.end()) continue;
-		p.set_value(subs[p].value());
+		p->set_value(subs[p]->value());
 	}
 }
 
-std::unordered_map<Param<double>, Param<double>> EquationSystem::solve_by_substitution()
+std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>>
+EquationSystem::solve_by_substitution()
 {
-	std::unordered_map<Param<double>, Param<double>> subs;
+	std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> subs;
 
 	for(std::size_t i = 0; i < equations.size(); i++) {
 		auto& eq = equations[i];
 		if(!eq->is_substitution_form()) continue;
-		auto* a = eq->get_substitution_param_a();
-		auto* b = eq->get_substitution_param_b();
+		auto a = eq->get_substitution_param_a();
+		auto b = eq->get_substitution_param_b();
 		if(std::abs(a->value() - b->value()) > GaussianMethod::epsilon) continue;
 		// check if b in current params
-		if(std::find(current_params.begin(), current_params.end(), *b) != current_params.end())
+		if(std::find(current_params.begin(), current_params.end(), b) != current_params.end())
 		{
 			// check if pointer swap is enough?!
 			std::swap(a, b);
@@ -230,18 +233,18 @@ std::unordered_map<Param<double>, Param<double>> EquationSystem::solve_by_substi
 
 		for (auto& kv : subs)
 		{
-			if (subs[kv.first] == *b)
+			if (subs[kv.first] == b)
 			{
-				subs[kv.first] = *a;
+				subs[kv.first] = a;
 			}
 		}
-		subs[*b] = *a;
+		subs[b] = a;
 
 		equations.erase(equations.begin() + i);
 		i--;
-		current_params.erase(std::find(current_params.begin(), current_params.end(), *b));
+		current_params.erase(std::find(current_params.begin(), current_params.end(), b));
 		for(std::size_t j = 0; j < equations.size(); j++) {
-			equations[j]->substitute(*b, *a);
+			equations[j]->substitute(b, a);
 		}
 	}
 	return subs;
@@ -277,7 +280,7 @@ SolveResult EquationSystem::solve()
 		solve_least_squares(A, B, X);
 		for(int i = 0; i < current_params.size(); i++)
 		{
-			current_params[i].set_value(current_params[i].value() - X[i]);
+			current_params[i]->set_value(current_params[i]->value() - X[i]);
 		}
 	} while(steps++ <= max_steps);
 	is_converged(false, true);
