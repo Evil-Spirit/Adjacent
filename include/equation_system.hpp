@@ -53,6 +53,7 @@ public:
     void remove_equation(const std::shared_ptr<Expr>& eq);
 
     void add_parameter(const std::shared_ptr<Param<double>>& p);
+    void add_parameters(const std::vector<ParamPtr>& p);
 
     void remove_parameter(const std::shared_ptr<Param<double>>& p);
 

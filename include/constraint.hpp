@@ -14,10 +14,17 @@ public:
 
 class ValueConstraint : public Constraint {
 protected:
-    ParamPtr value = param("value", 0);
-
+    ParamPtr value = param("c_value", 0);
 
 public:
+
+    bool reference;
+
+    void set_reference(bool value) {
+        reference = value;
+        // mark dirty
+    } 
+
     virtual bool on_satisfy() = 0;
 
     bool satisfy() {
@@ -26,6 +33,13 @@ public:
             std::cout << "satisfy failed!"; // << GetType() +;
         }
         return result;
+    }
+
+    std::vector<ParamPtr> parameters() {
+        if (!reference) return {};
+        else {
+            return std::vector<ParamPtr>({value});
+        }
     }
 
     // public override IEnumerable<Param> parameters {
@@ -48,6 +62,7 @@ public:
     PointOnConstraint(Entity* point, Entity* on)
         : point(point), on(on)
     {
+        reference = true;
         entities.push_back(point);
         entities.push_back(on);
         set_value(0.51);
@@ -56,7 +71,7 @@ public:
 
     bool on_satisfy() {
         EquationSystem sys;
-        // sys.add_parameters(parameters);
+        sys.add_parameters(parameters());
         auto exprs = equations();
         sys.add_equations(exprs);
 

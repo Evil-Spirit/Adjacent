@@ -46,6 +46,12 @@ void EquationSystem::add_parameter(const std::shared_ptr<Param<double>>& p)
     is_dirty = true;
 }
 
+void EquationSystem::add_parameters(const std::vector<ParamPtr>& pv)
+{
+    for (const auto& p : pv)
+        add_parameter(p);
+}
+
 void EquationSystem::remove_parameter(const std::shared_ptr<Param<double>>& p)
 {
     auto it = std::find(parameters.begin(), parameters.end(), p);
@@ -329,6 +335,7 @@ SolveResult EquationSystem::solve()
         }
         eval_jacobian(J, A, !is_drag_step);
         solve_least_squares(A, B, X);
+        std::cout << "X = " << X << std::endl;
         for (int i = 0; i < current_params.size(); i++)
         {
             current_params[i]->set_value(current_params[i]->value() - X[i]);
