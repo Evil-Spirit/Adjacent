@@ -2,6 +2,7 @@
 #include <unordered_map>
 
 #include <xtensor/xtensor.hpp>
+#include <xtensor/xio.hpp>
 #include "expression.hpp"
 #include "expression_vector.hpp"
 #include "gaussian_method.hpp"
@@ -19,6 +20,12 @@ void EquationSystem::add_equation(const ExpVector& v)
     source_equations.push_back(v.y);
     source_equations.push_back(v.z);
     is_dirty = true;
+}
+
+void EquationSystem::add_equations(const std::vector<ExprPtr>& eq)
+{
+    for (const auto& e : eq)
+        add_equation(e);
 }
 
 void EquationSystem::remove_equation(const std::shared_ptr<Expr>& eq)
@@ -65,6 +72,7 @@ void EquationSystem::eval(xt::xtensor<double, 1>& B, bool clear_drag)
 
 bool EquationSystem::is_converged(bool check_drag, bool print_non_converged /* = false*/)
 {
+    std::cout << B << std::endl;
     for (int i = 0; i < equations.size(); i++)
     {
         if (!check_drag && equations[i]->is_drag())
@@ -314,8 +322,8 @@ SolveResult EquationSystem::solve()
                 // Debug.Log(String.Format("solved {0} equations with {1} unknowns in {2} steps",
                 // equations.Count, currentParams.Count, steps));
             }
-            stats += "eqs: " + std::to_string(equations.size())
-                     + "\nnunkn: " + std::to_string(current_params.size());
+            stats += "eqs: " + std::to_string(equations.size()) +
+                     "\nnunkn: " + std::to_string(current_params.size());
             back_substitution(subs);
             return SolveResult::OKAY;
         }
@@ -326,11 +334,14 @@ SolveResult EquationSystem::solve()
             current_params[i]->set_value(current_params[i]->value() - X[i]);
         }
     } while (steps++ <= max_steps);
+
     is_converged(false, true);
+
     if (revert_when_not_converged)
     {
         revert_params();
         dof_changed = false;
     }
+
     return SolveResult::DIDNT_CONVERGE;
 }

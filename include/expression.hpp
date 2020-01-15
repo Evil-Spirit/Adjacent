@@ -10,8 +10,8 @@ class Expr;
 template <class T>
 class Param;
 
-// using ParamPtr = std::shared_ptr<Param<double>>;
-// using ExprPtr = std::shared_ptr<Expr>;
+using ParamPtr = std::shared_ptr<Param<double>>;
+using ExprPtr = std::shared_ptr<Expr>;
 
 template <typename T>
 inline int sign(T val)
@@ -34,6 +34,10 @@ public:
     Param() = default;
     Param(const std::string& name, bool reduceable = true);
     Param(const std::string& name, double value);
+
+    std::string to_string() const {
+        return "(" + std::to_string(m_value) + ")";
+    }
 
     void set_value(const T& other);
     T value() const;

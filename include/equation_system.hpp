@@ -48,6 +48,7 @@ public:
 
     void add_equation(const std::shared_ptr<Expr>& eq);
     void add_equation(const ExpVector& v);
+    void add_equations(const std::vector<ExprPtr>& v);
 
     void remove_equation(const std::shared_ptr<Expr>& eq);
 
