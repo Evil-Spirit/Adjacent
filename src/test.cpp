@@ -15,16 +15,36 @@ int main()
     std::cout << c->d(p)->to_string() << std::endl;
     std::cout << "Hello world." << std::endl;
 
-    PointE point1(param("p1_x", 3), param("p1_y", 1), param("p1_z", 1));
-    PointE point2(param("p2_x", 4), param("p2_y", 2), param("p2_z", 1));
-    PointE point3(param("p3_x", 3.5), param("p3_y", 1.5), param("p3_z", 1));
+    auto p1 = std::make_shared<PointE>(param("p1_x", 3), param("p1_y", 1), param("p1_z", 1));
+    auto p2 = std::make_shared<PointE>(param("p2_x", 4), param("p2_y", 2), param("p2_z", 1));
+    auto p3 = std::make_shared<PointE>(param("p3_x", 10.5), param("p3_y", 1.5), param("p3_z", 1));
 
-    LineE line(point1, point2);
+    auto l = std::make_shared<LineE>(*p1, *p2);
 
-    std::cout << line.to_string() << std::endl;
-    std::cout << point3.to_string() << std::endl;
+    std::cout << l->to_string() << std::endl;
+    std::cout << p3->to_string() << std::endl;
 
-    auto ccc = PointOnConstraint(&point3, &line);
+    auto ccc = std::make_shared<PointOnConstraint>(p3, l);
+
+    Sketch s;
+
+    s.add_entity(p1);
+    s.add_entity(l);
+    s.add_constraint(ccc);
+    s.update();
+
+    std::cout << s.sys.solve() << std::endl;
+
+    int rank;
+    s.sys.test_rank(rank);
+
+    std::cout << "RANK: " << rank << std::endl;
+
+    for (auto& el : s.entities)
+    {
+        std::cout << el->to_string() << std::endl;
+    }
+
 
     return 0;
 }
