@@ -78,7 +78,6 @@ void EquationSystem::eval(xt::xtensor<double, 1>& B, bool clear_drag)
 
 bool EquationSystem::is_converged(bool check_drag, bool print_non_converged /* = false*/)
 {
-    std::cout << B << std::endl;
     for (int i = 0; i < equations.size(); i++)
     {
         if (!check_drag && equations[i]->is_drag())
@@ -91,7 +90,7 @@ bool EquationSystem::is_converged(bool check_drag, bool print_non_converged /* =
 
         if (print_non_converged)
         {
-            std::cout << "Not converged: " + equations[i]->to_string();
+            std::cout << "Not converged: " + equations[i]->to_string() << "\n";
             continue;
             // continue; ???
         }
@@ -268,7 +267,9 @@ EquationSystem::solve_by_substitution()
     {
         auto& eq = equations[i];
         if (!eq->is_substitution_form())
+        {
             continue;
+        }
         auto a = eq->get_substitution_param_a();
         auto b = eq->get_substitution_param_b();
         if (std::abs(a->value() - b->value()) > GaussianMethod::epsilon)
@@ -325,8 +326,7 @@ SolveResult EquationSystem::solve()
             if (steps > 0)
             {
                 dof_changed = true;
-                // Debug.Log(String.Format("solved {0} equations with {1} unknowns in {2} steps",
-                // equations.Count, currentParams.Count, steps));
+                std::cout << "Solved " << equations.size() << " equations with " << current_params.size() << " unknowns in " << steps << " steps.\n";
             }
             stats += "eqs: " + std::to_string(equations.size()) +
                      "\nnunkn: " + std::to_string(current_params.size());
@@ -335,10 +335,9 @@ SolveResult EquationSystem::solve()
         }
         eval_jacobian(J, A, !is_drag_step);
         solve_least_squares(A, B, X);
-        std::cout << "X = " << X << std::endl;
         for (int i = 0; i < current_params.size(); i++)
         {
-            current_params[i]->set_value(current_params[i]->value() - X[i]);
+            current_params[i]->set_value(current_params[i]->value() - X(i));
         }
     } while (steps++ <= max_steps);
 

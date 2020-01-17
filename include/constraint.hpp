@@ -1,5 +1,3 @@
-
-
 #include "entity.hpp"
 #include "expression.hpp"
 #include "equation_system.hpp"
@@ -77,7 +75,7 @@ public:
 
         double bestI = 0.0;
         double min = -1.0;
-        for(double i = 0.0; i < 1.0; i += 0.25 / 2.0) {
+        for(double i = 0.0; i <= 1.0; i += 0.25 / 2.0) {
             value->set_value(i);
             sys.solve();
             double cur_value = 0;
@@ -88,6 +86,7 @@ public:
             bestI = value->value();
             min = cur_value;
         }
+        std::cout << "value : " << bestI << std::endl;
         value->set_value(bestI);
         return true;
     }

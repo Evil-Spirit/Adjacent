@@ -102,7 +102,7 @@ void GaussianMethod::solve(xt::xtensor<double, 2> A,
         }
     }
 
-    for (std::ptrdiff_t r = rows; r > 0; r--)
+    for (std::ptrdiff_t r = rows; r >= 0; r--)
     {
         if (std::abs(A(r, r)) < epsilon)
             continue;
