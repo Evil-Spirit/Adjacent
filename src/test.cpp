@@ -24,14 +24,26 @@ int main()
     std::cout << l->to_string() << std::endl;
     std::cout << p3->to_string() << std::endl;
 
-    auto ccc = std::make_shared<PointOnConstraint>(p3, l);
-
     Sketch s;
-
     s.add_entity(p1);
     s.add_entity(l);
+
+    std::cout << "Adding Point On" << std::endl;
+    auto ccc = std::make_shared<PointOnConstraint>(p3, l);
     s.add_constraint(ccc);
     s.update();
+    s.sys.solve();
+    std::cout << "Adding length" << std::endl;
+    auto lC = std::make_shared<LengthConstraint>(l, 15);
+    s.add_constraint(lC);
+    s.update();
+    s.sys.solve();
+
+    std::cout << "Adding HV Constraint" << std::endl;
+    auto HC = std::make_shared<HVConstraint>(l, OX);
+    s.add_constraint(HC);
+    s.update();
+    s.sys.solve();
 
     std::cout << s.sys.solve() << std::endl;
 
