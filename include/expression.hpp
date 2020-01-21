@@ -137,6 +137,11 @@ public:
 
     Expr(std::shared_ptr<Param<double>> p);
 
+    Expr(const Op& op, const std::shared_ptr<Expr>& a) :
+        Expr(op, a, nullptr)
+    {
+    }
+
     Expr(const Op& op, const std::shared_ptr<Expr>& a, const std::shared_ptr<Expr>& b);
 
     std::shared_ptr<Expr> drag(const std::shared_ptr<Expr>& to)

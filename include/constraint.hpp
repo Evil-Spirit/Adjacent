@@ -12,8 +12,15 @@ enum CONSTRAINT_TYPE {
     PointOn,
     PointsCoincident,
     Parallel,
-    Length
+    Length,
+    PointsDistance,
+    HV
 };
+
+class Constraint;
+
+using ConstraintPtr = std::shared_ptr<Constraint>;
+using EntityPtr = std::shared_ptr<Entity>;
 
 class Constraint {
 public:
@@ -30,16 +37,20 @@ public:
 };
 
 class ValueConstraint : public Constraint {
-protected:
-    ParamPtr value = param("c_value", 0);
-
 public:
+    ParamPtr value = param("c_value", 0);
 
     bool reference;
 
     ValueConstraint(CONSTRAINT_TYPE type) :
         Constraint(type)
     {
+    }
+
+    ValueConstraint(CONSTRAINT_TYPE type, double v) :
+        Constraint(type)
+    {
+        value->set_value(v);
     }
 
     void set_reference(bool value) {
@@ -127,8 +138,6 @@ ExprPtr angle2d(const ExpVector& d0, const ExpVector& d1, bool angle360 = false)
     if (angle360) return PI_E - atan2(nv, -nu);
     return atan2(nv, nu);
 }
-    
-
 
 class Parallel : public Constraint {
 
@@ -187,19 +196,23 @@ class Parallel : public Constraint {
     }
 };
 
-class Length : public ValueConstraint {
+class LengthConstraint : public ValueConstraint {
 public:
     // public ExpVector p0exp { get { return GetPointInPlane(0, sketch.plane); } }
     // public ExpVector p1exp { get { return GetPointInPlane(1, sketch.plane); } }
 
     std::shared_ptr<Entity> entity;
 
-    Length(const std::shared_ptr<Entity>& e) :
-        ValueConstraint(CONSTRAINT_TYPE::Length),
+    LengthConstraint(std::shared_ptr<Entity> e, double l) :
+        ValueConstraint(CONSTRAINT_TYPE::Length, l),
         entity(e)
     {
         entities.push_back(e.get());
         satisfy();
+    }
+
+    bool on_satisfy() {
+        return true;
     }
 
     std::vector<ExprPtr> equations() {
@@ -215,11 +228,117 @@ public:
     // }
 };
 
+class PointsCoincident : public Constraint {
+
+    std::shared_ptr<PointE> p0, p1;
+
+    PointsCoincident(const std::shared_ptr<PointE>& p0, const std::shared_ptr<PointE>& p1) :
+        Constraint(CONSTRAINT_TYPE::PointsCoincident), p0(p0), p1(p1)
+    {
+        entities.push_back(p0.get());
+        entities.push_back(p1.get());
+    }
+
+    std::vector<ExprPtr> equations() {
+        // var pe0 = p0.GetPointAtInPlane(0, sketch.plane);
+        // var pe1 = p1.GetPointAtInPlane(0, sketch.plane);
+
+        return std::vector<ExprPtr>({
+            p0->x->expr() - p1->x->expr(),
+            p0->y->expr() - p1->y->expr()
+        });
+        // if 3d
+        // if(sketch.is3d) yield return pe0.z - pe1.z;
+    }
+
+    std::shared_ptr<PointE>& get_other_point(const std::shared_ptr<PointE>& p) {
+        if(p0 == p) return p1;
+        return p0;
+    }
+};
+
+class PointsDistance : public ValueConstraint {
+public:
+
+    EntityPtr p0, p1;
+
+    PointsDistance(const EntityPtr& p0, const EntityPtr& p1, double d) :
+        ValueConstraint(CONSTRAINT_TYPE::PointsDistance, d), p0(p0), p1(p1)
+    {
+        entities.push_back(p0.get());
+        entities.push_back(p1.get());
+        satisfy();
+    }
+
+    PointsDistance(const EntityPtr& line) : 
+        ValueConstraint(CONSTRAINT_TYPE::PointsDistance), p0(line), p1(nullptr)
+    {
+        entities.push_back(line.get());
+        satisfy();
+    }
+
+    std::vector<ExprPtr> equations() {
+        return std::vector<ExprPtr>({
+            // TODO caching
+            (get_point(1) - get_point(0)).magnitude() - value->expr()
+        });
+    }
+
+    ExpVector get_point(double i) {
+        if (p1 == nullptr) {
+            return i ? dynamic_cast<LineE*>(p0.get())->source().expr() : dynamic_cast<LineE*>(p0.get())->target().expr();
+        }
+        else {
+            return i ? dynamic_cast<PointE*>(p0.get())->expr() : dynamic_cast<PointE*>(p1.get())->expr();
+        }
+    }            
+};
+
+enum HVOrientation {
+    OX,
+    OY,
+    // OZ
+};
+
+class HVConstraint : public Constraint {
+public:
+
+    PointE* p0;
+    PointE* p1;
+
+    HVOrientation orientation = HVOrientation::OX;
+
+    HVConstraint(std::shared_ptr<PointE> p0, std::shared_ptr<PointE> p1, HVOrientation o) :
+        Constraint(CONSTRAINT_TYPE::HV), p0(p0.get()), p1(p1.get()), orientation(o)
+    {
+        entities.push_back(p0.get());
+        entities.push_back(p1.get());
+    }
+
+    HVConstraint(std::shared_ptr<LineE> line, HVOrientation o) : 
+        Constraint(CONSTRAINT_TYPE::HV), p0(&(line.get())->source()), p1(&(line.get())->target()), orientation(o) {
+        entities.push_back(line.get());
+    }
+
+    std::vector<ExprPtr> equations() {
+        ExprPtr exp;
+        switch(orientation) {
+            case HVOrientation::OX: exp = p0->x->expr() - p1->x->expr(); break;
+            case HVOrientation::OY: exp = p0->y->expr() - p1->y->expr(); break;
+            // case HVOrientation::OZ: exp = p0->z->expr() - p1->z->expr(); break;
+        }
+
+        return std::vector<ExprPtr>({ exp });
+    }
+
+    std::vector<ParamPtr> parameters() {
+        return {};
+    }
+};
 
 
 
-using ConstraintPtr = std::shared_ptr<Constraint>;
-using EntityPtr = std::shared_ptr<Entity>;
+
 
 class Sketch {
 public:
