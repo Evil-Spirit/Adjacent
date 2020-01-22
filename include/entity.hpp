@@ -120,7 +120,12 @@ public:
 
 };
 
-class LineE : public Entity {
+class SegmentaryEntity {
+	virtual PointE& source() = 0;
+	virtual PointE& target() = 0;
+};
+
+class LineE : public Entity, public SegmentaryEntity {
 public:
 	PointE p0, p1;
 
