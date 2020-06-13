@@ -1,7 +1,7 @@
+#include "gaussian_method.hpp"
+
 #include <xtensor/xtensor.hpp>
 #include <xtensor/xio.hpp>
-
-#include "gaussian_method.hpp"
 
 // copy A so it doesn't get overwritten
 // note: could use xt::linalg::rank

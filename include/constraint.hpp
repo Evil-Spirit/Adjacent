@@ -60,7 +60,7 @@ public:
     std::vector<ParamPtr> parameters() {
         if (!reference) return {};
         else {
-            return std::vector<ParamPtr>({value});
+            return { value };
         }
     }
 
@@ -78,6 +78,7 @@ public:
     PointOnConstraint(std::shared_ptr<Entity> point, std::shared_ptr<Entity> on)
         : ValueConstraint::ValueConstraint(PointOn), point(point), on(on)
     {
+        // TODO Add runtime check that point is point, and on is some other entity! 
         reference = true;
         entities.push_back(point.get());
         entities.push_back(on.get());
@@ -87,7 +88,8 @@ public:
 
     bool on_satisfy() {
         EquationSystem sys;
-        sys.add_parameters(parameters());
+        auto params = parameters();
+        sys.add_parameters(params);
         auto exprs = equations();
         sys.add_equations(exprs);
 
@@ -164,6 +166,7 @@ class Parallel : public Constraint {
             case Option::Codirected: return std::vector<ExprPtr>({angle});
             case Option::Antidirected: return std::vector<ExprPtr>({abs(angle) - PI_E});
         }
+        throw std::runtime_error("unhandled option");
     }
 
     void choose_best_option() {
@@ -189,9 +192,6 @@ class Parallel : public Constraint {
 
 class Length : public ValueConstraint {
 public:
-    // public ExpVector p0exp { get { return GetPointInPlane(0, sketch.plane); } }
-    // public ExpVector p1exp { get { return GetPointInPlane(1, sketch.plane); } }
-
     std::shared_ptr<Entity> entity;
 
     Length(const std::shared_ptr<Entity>& e) :
@@ -205,16 +205,119 @@ public:
     std::vector<ExprPtr> equations() {
          return std::vector<ExprPtr>({entity->length() - value->expr()});
     }
-    
-    // ExpVector GetPointInPlane(int i, IPlane plane) {
-    //     return GetEntity(0).GetPointAtInPlane(i, plane);
-    // }
-
-    // protected override Matrix4x4 OnGetBasis() {
-    //     return sketch.plane.GetTransform();
-    // }
 };
 
+// public class AngleConstraint : ValueConstraint {
+
+//     bool supplementary_;
+//     public bool supplementary {
+//         get {
+//             return supplementary_;
+//         }
+//         set {
+//             if(value == supplementary_) return;
+//             supplementary_ = value;
+//             if(HasEntitiesOfType(IEntityType.Arc, 1)) {
+//                 this.value.value = 2.0 * Math.PI - this.value.value;
+//             } else {
+//                 this.value.value = -(Math.Sign(this.value.value) * Math.PI - this.value.value);
+//             }
+//             sketch.MarkDirtySketch(topo:true);
+//         }
+//     }
+
+//     public AngleConstraint(Sketch sk, IEntity[] points) : base(sk) {
+//         foreach(var p in points) {
+//             AddEntity(p);
+//         }
+//         Satisfy();
+//     }
+
+//     public AngleConstraint(Sketch sk, IEntity arc) : base(sk) {
+//         AddEntity(arc);
+//         value.value = Math.PI / 4;
+//         Satisfy();
+//     }
+
+//     public AngleConstraint(Sketch sk, IEntity l0, IEntity l1) : base(sk) {
+//         AddEntity(l0);
+//         AddEntity(l1);
+//         Satisfy();
+//     }
+
+//     public override IEnumerable<Exp> equations {
+//         get {
+//             var p = GetPointsExp(sketch.plane);
+//             ExpVector d0 = p[0] - p[1];
+//             ExpVector d1 = p[3] - p[2];
+//             bool angle360 = HasEntitiesOfType(IEntityType.Arc, 1);
+//             Exp angle = sketch.is3d ? ConstraintExp.angle3d(d0, d1) : ConstraintExp.angle2d(d0, d1, angle360);
+//             yield return angle - value;
+//         }
+//     }
+
+//     Vector3[] GetPointsInPlane(IPlane plane) {
+//         return GetPointsExp(plane).Select(pe => pe.Eval()).ToArray();
+//     }
+
+//     Vector3[] GetPoints() {
+//         return GetPointsInPlane(sketch.plane);
+//     }
+
+//     ExpVector[] GetPointsExp(IPlane plane) {
+//         var p = new ExpVector[4];
+//         if(HasEntitiesOfType(IEntityType.Point, 4)) {
+//             for(int i = 0; i < 4; i++) {
+//                 p[i] = GetEntityOfType(IEntityType.Point, i).GetPointAtInPlane(0, plane);
+//             }
+//             if(supplementary) {
+//                 SystemExt.Swap(ref p[2], ref p[3]);
+//             }
+//         } else 
+//         if(HasEntitiesOfType(IEntityType.Line, 2)) {
+//             var l0 = GetEntityOfType(IEntityType.Line, 0);
+//             p[0] = l0.GetPointAtInPlane(0, plane);
+//             p[1] = l0.GetPointAtInPlane(1, plane);
+//             var l1 = GetEntityOfType(IEntityType.Line, 1);
+//             p[2] = l1.GetPointAtInPlane(0, plane);
+//             p[3] = l1.GetPointAtInPlane(1, plane);
+//             if(supplementary) {
+//                 SystemExt.Swap(ref p[2], ref p[3]);
+//             }
+//         } else 
+//         if(HasEntitiesOfType(IEntityType.Arc, 1)) {
+//             var arc = GetEntityOfType(IEntityType.Arc, 0);
+//             p[0] = arc.GetPointAtInPlane(0, plane);
+//             p[1] = arc.GetPointAtInPlane(2, plane);
+//             p[2] = arc.GetPointAtInPlane(2, plane);
+//             p[3] = arc.GetPointAtInPlane(1, plane);
+//             if(supplementary) {
+//                 SystemExt.Swap(ref p[0], ref p[3]);
+//                 SystemExt.Swap(ref p[1], ref p[2]);
+//             }
+//         }
+//         return p;
+//     }
+//     protected override Matrix4x4 OnGetBasis() {
+//         var pos = GetPoints();
+//         var p = pos[1];
+//         double angle = Math.Abs(GetValue());
+//         Vector3 z = Vector3.zero;
+//         if(Math.Abs(Math.Abs(angle) - 180.0) < EPSILON) {
+//             p = pos[1];
+//             if(sketch.plane != null) z = -sketch.plane.n;
+//         } else
+//         if(GeomUtils.isLinesCrossed(pos[0], pos[1], pos[2], pos[3], ref p, Mathf.Epsilon)) {
+//             z = Vector3.Cross(pos[0] - pos[1], pos[3] - pos[2]).normalized;
+//         }
+//         if(z.magnitude < Mathf.Epsilon) z = new Vector3(0.0f, 0.0f, 1.0f);
+        
+//         var y = Quaternion.AngleAxis((float)angle / 2f, z) * (pos[0] - pos[1]).normalized;
+//         var x = Vector3.Cross(y, z).normalized;
+//         var result = UnityExt.Basis(x, y, z, p);
+//         return getPlane().GetTransform() * result;
+//     }
+// }
 
 
 
