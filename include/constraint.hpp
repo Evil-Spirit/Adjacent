@@ -222,11 +222,11 @@ public:
     }
 };
 
-class PointsCoincident : public Constraint {
-
+class PointsCoincidentConstraint : public Constraint {
+public:
     std::shared_ptr<PointE> p0, p1;
 
-    PointsCoincident(const std::shared_ptr<PointE>& p0, const std::shared_ptr<PointE>& p1) :
+    PointsCoincidentConstraint(std::shared_ptr<PointE>& p0, std::shared_ptr<PointE>& p1) :
         Constraint(CONSTRAINT_TYPE::PointsCoincident), p0(p0), p1(p1)
     {
         entities.push_back(p0.get());
@@ -245,18 +245,23 @@ class PointsCoincident : public Constraint {
         // if(sketch.is3d) yield return pe0.z - pe1.z;
     }
 
+    std::vector<ParamPtr> parameters() {
+        return {};
+    }
+
+
     std::shared_ptr<PointE>& get_other_point(const std::shared_ptr<PointE>& p) {
         if(p0 == p) return p1;
         return p0;
     }
 };
 
-class PointsDistance : public ValueConstraint {
+class PointsDistanceConstraint : public ValueConstraint {
 public:
 
     EntityPtr p0, p1;
 
-    PointsDistance(const EntityPtr& p0, const EntityPtr& p1, double d) :
+    PointsDistanceConstraint(const std::shared_ptr<PointE>& p0, const std::shared_ptr<PointE>& p1, double d) :
         ValueConstraint(CONSTRAINT_TYPE::PointsDistance, d), p0(p0), p1(p1)
     {
         entities.push_back(p0.get());
@@ -264,11 +269,16 @@ public:
         satisfy();
     }
 
-    PointsDistance(const EntityPtr& line) : 
-        ValueConstraint(CONSTRAINT_TYPE::PointsDistance), p0(line), p1(nullptr)
+    PointsDistanceConstraint(const std::shared_ptr<LineE>& line, double d) : 
+        ValueConstraint(CONSTRAINT_TYPE::PointsDistance, d), p0(line), p1(nullptr)
     {
         entities.push_back(line.get());
         satisfy();
+    }
+
+    bool on_satisfy() {
+        // TODO not implemented yet.
+        return true;
     }
 
     std::vector<ExprPtr> equations() {
@@ -356,11 +366,11 @@ public:
 
     // AngleConstraint(Arc);
 
-    AngleConstraint(LineE* l0, LineE* l1) :
-        ValueConstraint(CONSTRAINT_TYPE::Angle)
+    AngleConstraint(std::shared_ptr<LineE>& l0, std::shared_ptr<LineE>& l1, double angle) :
+        ValueConstraint(CONSTRAINT_TYPE::Angle, angle)
     {
-        entities.push_back(l0);
-        entities.push_back(l1);
+        entities.push_back(l0.get());
+        entities.push_back(l1.get());
         satisfy();
     }
 

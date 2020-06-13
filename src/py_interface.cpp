@@ -47,13 +47,44 @@ PYBIND11_MODULE(adjacent_api, m) {
     	.def("__repr__", &LineE::to_string)
     ;
 
-    py::class_<Constraint, std::shared_ptr<Constraint>>(m, "Constraint")
-    ;
-    py::class_<ValueConstraint, std::shared_ptr<ValueConstraint>>(m, "ValueConstraint")
+    py::module sub = m.def_submodule("constraints");
+
+    py::class_<Constraint, std::shared_ptr<Constraint>>(sub, "Constraint")
     ;
 
-    py::class_<PointOnConstraint, ValueConstraint, Constraint, std::shared_ptr<PointOnConstraint>>(m, "PointOn")
-    	.def(py::init<std::shared_ptr<Entity>, std::shared_ptr<Entity>>())
+    py::class_<ValueConstraint, std::shared_ptr<ValueConstraint>>(sub, "ValueConstraint")
+    ;
+
+    py::class_<PointOnConstraint, ValueConstraint, Constraint, std::shared_ptr<PointOnConstraint>>(sub, "PointOn")
+    	.def(py::init<EntityPtr, EntityPtr>())
+    ;
+
+    py::class_<LengthConstraint, ValueConstraint, Constraint, std::shared_ptr<LengthConstraint>>(sub, "Length")
+        .def(py::init<EntityPtr, double>())
+    ;
+
+    py::class_<PointsCoincidentConstraint, Constraint, std::shared_ptr<PointsCoincidentConstraint>>(sub, "Coincident")
+        .def(py::init<std::shared_ptr<PointE>&, std::shared_ptr<PointE>&>())
+    ;
+
+    py::class_<PointsDistanceConstraint, ValueConstraint, Constraint, std::shared_ptr<PointsDistanceConstraint>>(sub, "Distance")
+        .def(py::init<std::shared_ptr<PointE>&, std::shared_ptr<PointE>&, double>())
+        .def(py::init<std::shared_ptr<LineE>&, double>())
+    ;
+
+    // py::class_<AngleConstraint, ValueConstraint, Constraint, std::shared_ptr<AngleConstraint>>(sub, "Angle")
+    //     .def(py::init<LineE, LineE, double>())
+    //     .def(py::init<EntityPtr, double>())
+    // ;
+
+    py::enum_<HVOrientation>(sub, "HVOrientation")  
+        .value("OX", HVOrientation::OX)
+        .value("OY", HVOrientation::OY)
+    ;
+
+    py::class_<HVConstraint, Constraint, std::shared_ptr<HVConstraint>>(sub, "HV")
+        .def(py::init<std::shared_ptr<PointE>, std::shared_ptr<PointE>, HVOrientation>())
+        .def(py::init<std::shared_ptr<LineE>, HVOrientation>())
     ;
 
     py::class_<Expr, std::shared_ptr<Expr>>(m, "Expr")
