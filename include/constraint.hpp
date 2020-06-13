@@ -12,8 +12,17 @@ enum CONSTRAINT_TYPE {
     PointOn,
     PointsCoincident,
     Parallel,
-    Length
+    Length,
+    PointsDistance,
+    HV, // Doesn't work yet?
+    Angle,
+    Diameter
 };
+
+class Constraint;
+
+using ConstraintPtr = std::shared_ptr<Constraint>;
+using EntityPtr = std::shared_ptr<Entity>;
 
 class Constraint {
 public:
@@ -30,16 +39,20 @@ public:
 };
 
 class ValueConstraint : public Constraint {
-protected:
-    ParamPtr value = param("c_value", 0);
-
 public:
+    ParamPtr value = param("c_value", 0);
 
     bool reference;
 
     ValueConstraint(CONSTRAINT_TYPE type) :
         Constraint(type)
     {
+    }
+
+    ValueConstraint(CONSTRAINT_TYPE type, double v) :
+        Constraint(type)
+    {
+        value->set_value(v);
     }
 
     void set_reference(bool value) {
@@ -129,8 +142,6 @@ ExprPtr angle2d(const ExpVector& d0, const ExpVector& d1, bool angle360 = false)
     if (angle360) return PI_E - atan2(nv, -nu);
     return atan2(nv, nu);
 }
-    
-
 
 class Parallel : public Constraint {
 
@@ -190,16 +201,20 @@ class Parallel : public Constraint {
     }
 };
 
-class Length : public ValueConstraint {
+class LengthConstraint : public ValueConstraint {
 public:
     std::shared_ptr<Entity> entity;
 
-    Length(const std::shared_ptr<Entity>& e) :
-        ValueConstraint(CONSTRAINT_TYPE::Length),
+    LengthConstraint(std::shared_ptr<Entity> e, double l) :
+        ValueConstraint(CONSTRAINT_TYPE::Length, l),
         entity(e)
     {
         entities.push_back(e.get());
         satisfy();
+    }
+
+    bool on_satisfy() {
+        return true;
     }
 
     std::vector<ExprPtr> equations() {
@@ -207,122 +222,265 @@ public:
     }
 };
 
-// public class AngleConstraint : ValueConstraint {
+class PointsCoincident : public Constraint {
 
-//     bool supplementary_;
-//     public bool supplementary {
-//         get {
-//             return supplementary_;
-//         }
-//         set {
-//             if(value == supplementary_) return;
-//             supplementary_ = value;
-//             if(HasEntitiesOfType(IEntityType.Arc, 1)) {
-//                 this.value.value = 2.0 * Math.PI - this.value.value;
-//             } else {
-//                 this.value.value = -(Math.Sign(this.value.value) * Math.PI - this.value.value);
-//             }
-//             sketch.MarkDirtySketch(topo:true);
-//         }
-//     }
+    std::shared_ptr<PointE> p0, p1;
 
-//     public AngleConstraint(Sketch sk, IEntity[] points) : base(sk) {
-//         foreach(var p in points) {
-//             AddEntity(p);
-//         }
-//         Satisfy();
-//     }
+    PointsCoincident(const std::shared_ptr<PointE>& p0, const std::shared_ptr<PointE>& p1) :
+        Constraint(CONSTRAINT_TYPE::PointsCoincident), p0(p0), p1(p1)
+    {
+        entities.push_back(p0.get());
+        entities.push_back(p1.get());
+    }
 
-//     public AngleConstraint(Sketch sk, IEntity arc) : base(sk) {
-//         AddEntity(arc);
-//         value.value = Math.PI / 4;
-//         Satisfy();
-//     }
+    std::vector<ExprPtr> equations() {
+        // var pe0 = p0.GetPointAtInPlane(0, sketch.plane);
+        // var pe1 = p1.GetPointAtInPlane(0, sketch.plane);
 
-//     public AngleConstraint(Sketch sk, IEntity l0, IEntity l1) : base(sk) {
-//         AddEntity(l0);
-//         AddEntity(l1);
-//         Satisfy();
-//     }
+        return std::vector<ExprPtr>({
+            p0->x->expr() - p1->x->expr(),
+            p0->y->expr() - p1->y->expr()
+        });
+        // if 3d
+        // if(sketch.is3d) yield return pe0.z - pe1.z;
+    }
 
-//     public override IEnumerable<Exp> equations {
-//         get {
-//             var p = GetPointsExp(sketch.plane);
-//             ExpVector d0 = p[0] - p[1];
-//             ExpVector d1 = p[3] - p[2];
-//             bool angle360 = HasEntitiesOfType(IEntityType.Arc, 1);
-//             Exp angle = sketch.is3d ? ConstraintExp.angle3d(d0, d1) : ConstraintExp.angle2d(d0, d1, angle360);
-//             yield return angle - value;
-//         }
-//     }
+    std::shared_ptr<PointE>& get_other_point(const std::shared_ptr<PointE>& p) {
+        if(p0 == p) return p1;
+        return p0;
+    }
+};
 
-//     Vector3[] GetPointsInPlane(IPlane plane) {
-//         return GetPointsExp(plane).Select(pe => pe.Eval()).ToArray();
-//     }
+class PointsDistance : public ValueConstraint {
+public:
 
-//     Vector3[] GetPoints() {
-//         return GetPointsInPlane(sketch.plane);
-//     }
+    EntityPtr p0, p1;
 
-//     ExpVector[] GetPointsExp(IPlane plane) {
-//         var p = new ExpVector[4];
-//         if(HasEntitiesOfType(IEntityType.Point, 4)) {
-//             for(int i = 0; i < 4; i++) {
-//                 p[i] = GetEntityOfType(IEntityType.Point, i).GetPointAtInPlane(0, plane);
-//             }
-//             if(supplementary) {
-//                 SystemExt.Swap(ref p[2], ref p[3]);
-//             }
-//         } else 
-//         if(HasEntitiesOfType(IEntityType.Line, 2)) {
-//             var l0 = GetEntityOfType(IEntityType.Line, 0);
-//             p[0] = l0.GetPointAtInPlane(0, plane);
-//             p[1] = l0.GetPointAtInPlane(1, plane);
-//             var l1 = GetEntityOfType(IEntityType.Line, 1);
-//             p[2] = l1.GetPointAtInPlane(0, plane);
-//             p[3] = l1.GetPointAtInPlane(1, plane);
-//             if(supplementary) {
-//                 SystemExt.Swap(ref p[2], ref p[3]);
-//             }
-//         } else 
-//         if(HasEntitiesOfType(IEntityType.Arc, 1)) {
-//             var arc = GetEntityOfType(IEntityType.Arc, 0);
-//             p[0] = arc.GetPointAtInPlane(0, plane);
-//             p[1] = arc.GetPointAtInPlane(2, plane);
-//             p[2] = arc.GetPointAtInPlane(2, plane);
-//             p[3] = arc.GetPointAtInPlane(1, plane);
-//             if(supplementary) {
-//                 SystemExt.Swap(ref p[0], ref p[3]);
-//                 SystemExt.Swap(ref p[1], ref p[2]);
-//             }
-//         }
-//         return p;
-//     }
-//     protected override Matrix4x4 OnGetBasis() {
-//         var pos = GetPoints();
-//         var p = pos[1];
-//         double angle = Math.Abs(GetValue());
-//         Vector3 z = Vector3.zero;
-//         if(Math.Abs(Math.Abs(angle) - 180.0) < EPSILON) {
-//             p = pos[1];
-//             if(sketch.plane != null) z = -sketch.plane.n;
-//         } else
-//         if(GeomUtils.isLinesCrossed(pos[0], pos[1], pos[2], pos[3], ref p, Mathf.Epsilon)) {
-//             z = Vector3.Cross(pos[0] - pos[1], pos[3] - pos[2]).normalized;
-//         }
-//         if(z.magnitude < Mathf.Epsilon) z = new Vector3(0.0f, 0.0f, 1.0f);
-        
-//         var y = Quaternion.AngleAxis((float)angle / 2f, z) * (pos[0] - pos[1]).normalized;
-//         var x = Vector3.Cross(y, z).normalized;
-//         var result = UnityExt.Basis(x, y, z, p);
-//         return getPlane().GetTransform() * result;
-//     }
-// }
+    PointsDistance(const EntityPtr& p0, const EntityPtr& p1, double d) :
+        ValueConstraint(CONSTRAINT_TYPE::PointsDistance, d), p0(p0), p1(p1)
+    {
+        entities.push_back(p0.get());
+        entities.push_back(p1.get());
+        satisfy();
+    }
 
+    PointsDistance(const EntityPtr& line) : 
+        ValueConstraint(CONSTRAINT_TYPE::PointsDistance), p0(line), p1(nullptr)
+    {
+        entities.push_back(line.get());
+        satisfy();
+    }
 
+    std::vector<ExprPtr> equations() {
+        return std::vector<ExprPtr>({
+            // TODO caching
+            (get_point(1) - get_point(0)).magnitude() - value->expr()
+        });
+    }
 
-using ConstraintPtr = std::shared_ptr<Constraint>;
-using EntityPtr = std::shared_ptr<Entity>;
+    ExpVector get_point(double i) {
+        if (p1 == nullptr) {
+            return i ? dynamic_cast<LineE*>(p0.get())->source().expr() : dynamic_cast<LineE*>(p0.get())->target().expr();
+        }
+        else {
+            return i ? dynamic_cast<PointE*>(p0.get())->expr() : dynamic_cast<PointE*>(p1.get())->expr();
+        }
+    }            
+};
+
+enum HVOrientation {
+    OX,
+    OY,
+    // OZ
+};
+
+class HVConstraint : public Constraint {
+public:
+
+    PointE* p0;
+    PointE* p1;
+
+    HVOrientation orientation = HVOrientation::OX;
+
+    HVConstraint(std::shared_ptr<PointE> p0, std::shared_ptr<PointE> p1, HVOrientation o) :
+        Constraint(CONSTRAINT_TYPE::HV), p0(p0.get()), p1(p1.get()), orientation(o)
+    {
+        entities.push_back(p0.get());
+        entities.push_back(p1.get());
+    }
+
+    HVConstraint(std::shared_ptr<LineE> line, HVOrientation o) : 
+        Constraint(CONSTRAINT_TYPE::HV), p0(&(line.get())->source()), p1(&(line.get())->target()), orientation(o) {
+        entities.push_back(line.get());
+    }
+
+    std::vector<ExprPtr> equations() {
+        ExprPtr exp;
+        switch(orientation) {
+            case HVOrientation::OX: exp = p0->x->expr() - p1->x->expr(); break;
+            case HVOrientation::OY: exp = p0->y->expr() - p1->y->expr(); break;
+            // case HVOrientation::OZ: exp = p0->z->expr() - p1->z->expr(); break;
+        }
+
+        return std::vector<ExprPtr>({ exp });
+    }
+
+    std::vector<ParamPtr> parameters() {
+        return {};
+    }
+};
+
+class AngleConstraint : public ValueConstraint {
+public:
+
+    bool supplementary;
+
+    void set_supplementary(bool sup)
+    {
+        if (sup == supplementary) {
+            return;
+        }
+        supplementary = sup;
+        if (false) // arc == TODO!
+        {
+            value->set_value(2.0 * M_PI - value->value());
+        }
+        else
+        {
+            value->set_value(-sign(value->value()) * M_PI - value->value());
+        }
+        // mark dirty!
+    }
+
+    // AngleConstraint(PointE)
+
+    // AngleConstraint(Arc);
+
+    AngleConstraint(LineE* l0, LineE* l1) :
+        ValueConstraint(CONSTRAINT_TYPE::Angle)
+    {
+        entities.push_back(l0);
+        entities.push_back(l1);
+        satisfy();
+    }
+
+    std::vector<ExprPtr> equations() {
+        auto pts = get_points();
+        auto d0 = pts[0] - pts[1];
+        auto d1 = pts[3] - pts[2];
+        // bool angle360 = is_arc?
+        bool angle360 = false;
+        // Exp angle = sketch.is3d
+        ExprPtr angle = angle2d(d0, d1, angle360);
+        return { angle - value->expr() };
+    }
+
+    std::vector<ExpVector> get_points()
+    {
+        std::vector<ExpVector> res(4);
+
+        if (false) // points
+        {
+            for (int i = 0; i < 4; ++i)
+            {
+                res[i] = dynamic_cast<PointE*>(entities[i])->expr();
+            }
+        }
+        else if (true) // line
+        {
+            LineE* l0 = dynamic_cast<LineE*>(entities[0]);
+            res[0] = l0->source().expr();
+            res[1] = l0->target().expr();
+            LineE* l1 = dynamic_cast<LineE*>(entities[1]);
+            res[2] = l1->source().expr();
+            res[3] = l1->target().expr();
+            if (supplementary) {
+                std::swap(res[2], res[3]);
+            }
+        }
+        else if (false) // Arc
+        {
+        }
+
+        return res;
+    }
+};
+
+class Diameter : public ValueConstraint
+{
+public:
+    // bool showAsRadius = false;
+    EntityPtr e;
+
+    Diameter(EntityPtr c) : ValueConstraint(CONSTRAINT_TYPE::Diameter) {
+        // showAsRadius = (c.type == IEntityType.Arc);
+        entities.push_back(c.get());
+        satisfy();
+    }
+
+    std::vector<ExprPtr> equations()
+    {
+        return { e->radius() * two - value->expr() };
+    }
+};
+
+class Tangent : public Constraint
+{
+
+    enum Option {
+        Codirected,
+        AntiDirected
+    };
+
+    Option option;
+
+    ParamPtr t0 = param("t0", 0.0);
+    ParamPtr t1 = param("t1", 0.0);
+
+    bool is_coincident(double& tv0, double& tv1, ExprPtr& c, ParamPtr& p) {
+        auto* l0 = entities[0];
+        auto* l1 = entities[1];
+
+        auto* s0 = dynamic_cast<SegmentaryEntity*>(l0);
+        auto* s1 = dynamic_cast<SegmentaryEntity*>(l1);
+
+        // if(s0 != nullptr && s1 != nullptr) {
+        //    if (s0->begin->IsCoincidentWith(s1.begin))    { tv0 = 0.0; tv1 = 0.0; return true; }
+        //     if (s0.begin.IsCoincidentWith(s1.end))      { tv0 = 0.0; tv1 = 1.0; return true; }
+        //     if (s0.end.IsCoincidentWith(s1.begin))      { tv0 = 1.0; tv1 = 0.0; return true; }
+        //     if (s0.end.IsCoincidentWith(s1.end))        { tv0 = 1.0; tv1 = 1.0; return true; }
+        // }
+        // if(s0 != null) {
+        //     PointOn pOn = null;
+        //     if(s0.begin.IsCoincidentWithCurve(l1, ref pOn)) { tv0 = 0.0; p = t1; c = new Exp(t1) - pOn.GetValueParam(); return true; }
+        //     if(s0.end.IsCoincidentWithCurve(l1, ref pOn))   { tv0 = 1.0; p = t1; c = new Exp(t1) - pOn.GetValueParam(); return true; }
+        // }
+        // if(s1 != null) {
+        //     PointOn pOn = null;
+        //     if(s1.begin.IsCoincidentWithCurve(l0, ref pOn)) { p = t0; c = new Exp(t0) - pOn.GetValueParam(); tv1 = 0.0; return true; }
+        //     if(s1.end.IsCoincidentWithCurve(l0, ref pOn))   { p = t0; c = new Exp(t0) - pOn.GetValueParam(); tv1 = 1.0; return true; }
+        // }
+        return false;
+    }
+
+    std::vector<ParamPtr> parameters() {
+        double tv0 = 0.0;
+        double tv1 = 0.0;
+        ExprPtr c = nullptr;
+        ParamPtr p = nullptr;
+
+        if (is_coincident(tv0, tv1, c, p))
+        {
+            return { t0,  t1 };
+        } else {
+            if (p != nullptr)
+            {
+                return { p };
+            }
+        }
+    }
+
+};
 
 class Sketch {
 public:
