@@ -28,6 +28,8 @@ int main()
     s.add_entity(p1);
     s.add_entity(l);
 
+    PointsDistanceConstraint pxpx(p1, p2, 4.2);
+
     std::cout << "Adding Point On" << std::endl;
     auto ccc = std::make_shared<PointOnConstraint>(p3, l);
     s.add_constraint(ccc);
