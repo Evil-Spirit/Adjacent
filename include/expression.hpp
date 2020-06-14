@@ -36,7 +36,7 @@ public:
     Param(const std::string& name, double value);
 
     std::string to_string() const {
-        return "(" + std::to_string(m_value) + ")";
+        return "(" + m_name + ":" + std::to_string(m_value) + ")";
     }
 
     void set_value(const T& other);

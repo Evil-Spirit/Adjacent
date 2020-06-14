@@ -135,7 +135,7 @@ public:
 
 	std::vector<ParamPtr> parameters() {
 		std::vector<ParamPtr> res = p0.parameters();
-		std::vector<ParamPtr> p1_p = p0.parameters();
+		std::vector<ParamPtr> p1_p = p1.parameters();
 
 		copy(p1_p.begin(), p1_p.end(), back_inserter(res));
 		return res;

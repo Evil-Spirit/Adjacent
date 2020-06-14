@@ -8,6 +8,8 @@
 #include "gaussian_method.hpp"
 #include "equation_system.hpp"
 
+constexpr bool DEBUG = false;
+
 void EquationSystem::add_equation(const std::shared_ptr<Expr>& eq)
 {
     source_equations.push_back(eq);
@@ -321,6 +323,7 @@ SolveResult EquationSystem::solve()
             return SolveResult.POSTPONE;
         }
         */
+
         if (is_converged(is_drag_step))
         {
             if (steps > 0)
@@ -335,11 +338,29 @@ SolveResult EquationSystem::solve()
         }
         eval_jacobian(J, A, !is_drag_step);
         solve_least_squares(A, B, X);
+
         for (int i = 0; i < current_params.size(); i++)
         {
             current_params[i]->set_value(current_params[i]->value() - X(i));
         }
     } while (steps++ <= max_steps);
+
+    if (DEBUG)
+    {
+        for (std::size_t i = 0; i < J.shape(0); ++i)
+        {
+            for (std::size_t j = 0; j < J.shape(1); ++j)
+                std::cout << J(i, j)->to_string() << ", ";
+            std::cout << "\n";
+        }
+
+        std::cout << "Params: \n";
+        for (int i = 0; i < current_params.size(); i++)
+        {
+            std::cout << current_params[i]->to_string() << std::endl;
+            current_params[i]->set_value(current_params[i]->value() - X(i));
+        }
+    }
 
     is_converged(false, true);
 
