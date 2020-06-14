@@ -88,7 +88,7 @@ public:
     std::shared_ptr<Entity> point;
     std::shared_ptr<Entity> on;
 
-    PointOnConstraint(std::shared_ptr<Entity> point, std::shared_ptr<Entity> on)
+    PointOnConstraint(std::shared_ptr<PointE> point, std::shared_ptr<Entity> on)
         : ValueConstraint::ValueConstraint(PointOn), point(point), on(on)
     {
         // TODO Add runtime check that point is point, and on is some other entity! 
@@ -343,7 +343,12 @@ public:
 class AngleConstraint : public ValueConstraint {
 public:
 
-    bool supplementary;
+    bool supplementary = false;
+
+    bool on_satisfy()
+    {
+        return true;
+    }
 
     void set_supplementary(bool sup)
     {
