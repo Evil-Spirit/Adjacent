@@ -54,6 +54,10 @@ public:
 	}
 
 	std::vector<ParamPtr> parameters() {
+		if (is_3d())
+		{
+			return {x, y, z};
+		}
 		return {x, y};
 	}
 

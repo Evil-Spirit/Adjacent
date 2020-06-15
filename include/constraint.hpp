@@ -14,7 +14,7 @@ enum CONSTRAINT_TYPE {
     Parallel,
     Length,
     PointsDistance,
-    HV, // Doesn't work yet?
+    HV,
     Angle,
     Diameter
 };
@@ -42,7 +42,7 @@ class ValueConstraint : public Constraint {
 public:
     ParamPtr value = param("c_value", 0);
 
-    bool reference;
+    bool reference = false;
 
     ValueConstraint(CONSTRAINT_TYPE type) :
         Constraint(type)
@@ -60,7 +60,14 @@ public:
         // mark dirty
     } 
 
-    virtual bool on_satisfy() = 0;
+    virtual bool on_satisfy() {
+        // protected virtual bool OnSatisfy() {
+        EquationSystem sys;
+        sys.revert_when_not_converged = false;
+        sys.add_parameter(value);
+        sys.add_equations(equations());
+        return sys.solve() == SolveResult::OKAY;
+    }
 
     bool satisfy() {
         bool result = on_satisfy();
@@ -210,15 +217,12 @@ public:
         entity(e)
     {
         entities.push_back(e.get());
-        satisfy();
-    }
-
-    bool on_satisfy() {
-        return true;
+        satisfy(); // does this make sense here?
+        value->set_value(l);
     }
 
     std::vector<ExprPtr> equations() {
-         return std::vector<ExprPtr>({entity->length() - value->expr()});
+        return {entity->length() - value->expr()};
     }
 };
 
@@ -274,11 +278,6 @@ public:
     {
         entities.push_back(line.get());
         satisfy();
-    }
-
-    bool on_satisfy() {
-        // TODO not implemented yet.
-        return true;
     }
 
     std::vector<ExprPtr> equations() {
@@ -345,11 +344,6 @@ public:
 
     bool supplementary = false;
 
-    bool on_satisfy()
-    {
-        return true;
-    }
-
     void set_supplementary(bool sup)
     {
         if (sup == supplementary) {
@@ -377,6 +371,7 @@ public:
         entities.push_back(l0.get());
         entities.push_back(l1.get());
         satisfy();
+        value->set_value(angle);
     }
 
     std::vector<ExprPtr> equations() {

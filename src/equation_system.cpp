@@ -8,10 +8,11 @@
 #include "gaussian_method.hpp"
 #include "equation_system.hpp"
 
-constexpr bool DEBUG = false;
+constexpr bool DEBUG = true;
 
 void EquationSystem::add_equation(const std::shared_ptr<Expr>& eq)
 {
+    if (DEBUG) std::cout << "Adding equation: " << eq->to_string() << std::endl;
     source_equations.push_back(eq);
     is_dirty = true;
 }
@@ -334,6 +335,22 @@ SolveResult EquationSystem::solve()
             stats += "eqs: " + std::to_string(equations.size()) +
                      "\nnunkn: " + std::to_string(current_params.size());
             back_substitution(subs);
+            if (DEBUG)
+            {
+                for (std::size_t i = 0; i < J.shape(0); ++i)
+                {
+                    for (std::size_t j = 0; j < J.shape(1); ++j)
+                        std::cout << J(i, j)->to_string() << ", ";
+                    std::cout << "\n";
+                }
+
+                std::cout << "Params: \n";
+                for (int i = 0; i < current_params.size(); i++)
+                {
+                    std::cout << current_params[i]->to_string() << std::endl;
+                }
+            }
+
             return SolveResult::OKAY;
         }
         eval_jacobian(J, A, !is_drag_step);
@@ -358,7 +375,6 @@ SolveResult EquationSystem::solve()
         for (int i = 0; i < current_params.size(); i++)
         {
             std::cout << current_params[i]->to_string() << std::endl;
-            current_params[i]->set_value(current_params[i]->value() - X(i));
         }
     }
 
