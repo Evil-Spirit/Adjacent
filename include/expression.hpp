@@ -10,8 +10,8 @@ class Expr;
 template <class T>
 class Param;
 
-// using ParamPtr = std::shared_ptr<Param<double>>;
-// using ExprPtr = std::shared_ptr<Expr>;
+using ParamPtr = std::shared_ptr<Param<double>>;
+using ExprPtr = std::shared_ptr<Expr>;
 
 template <typename T>
 inline int sign(T val)
@@ -34,6 +34,11 @@ public:
     Param() = default;
     Param(const std::string& name, bool reduceable = true);
     Param(const std::string& name, double value);
+
+    std::string to_string() const
+    {
+        return "(" + m_name + ":" + std::to_string(m_value) + ")";
+    }
 
     void set_value(const T& other);
     T value() const;
@@ -133,6 +138,11 @@ public:
 
     Expr(std::shared_ptr<Param<double>> p);
 
+    Expr(const Op& op, const std::shared_ptr<Expr>& a)
+        : Expr(op, a, nullptr)
+    {
+    }
+
     Expr(const Op& op, const std::shared_ptr<Expr>& a, const std::shared_ptr<Expr>& b);
 
     std::shared_ptr<Expr> drag(const std::shared_ptr<Expr>& to)
@@ -172,7 +182,9 @@ public:
 };
 
 static std::shared_ptr<Expr> zero = std::make_shared<Expr>(0.), one = std::make_shared<Expr>(1.),
-                             mOne = std::make_shared<Expr>(-1.), two = std::make_shared<Expr>(2.0);
+                             mOne = std::make_shared<Expr>(-1.), two = std::make_shared<Expr>(2.0),
+                             PI_E = std::make_shared<Expr>(M_PI),
+                             PI2_E = std::make_shared<Expr>(M_PI * 2);
 
 std::shared_ptr<Expr> expr(double);
 

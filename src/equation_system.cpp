@@ -2,13 +2,18 @@
 #include <unordered_map>
 
 #include <xtensor/xtensor.hpp>
+#include <xtensor/xio.hpp>
 #include "expression.hpp"
 #include "expression_vector.hpp"
 #include "gaussian_method.hpp"
 #include "equation_system.hpp"
 
+constexpr bool DEBUG = true;
+
 void EquationSystem::add_equation(const std::shared_ptr<Expr>& eq)
 {
+    if (DEBUG)
+        std::cout << "Adding equation: " << eq->to_string() << std::endl;
     source_equations.push_back(eq);
     is_dirty = true;
 }
@@ -19,6 +24,12 @@ void EquationSystem::add_equation(const ExpVector& v)
     source_equations.push_back(v.y);
     source_equations.push_back(v.z);
     is_dirty = true;
+}
+
+void EquationSystem::add_equations(const std::vector<ExprPtr>& eq)
+{
+    for (const auto& e : eq)
+        add_equation(e);
 }
 
 void EquationSystem::remove_equation(const std::shared_ptr<Expr>& eq)
@@ -37,6 +48,12 @@ void EquationSystem::add_parameter(const std::shared_ptr<Param<double>>& p)
 {
     parameters.push_back(p);
     is_dirty = true;
+}
+
+void EquationSystem::add_parameters(const std::vector<ParamPtr>& pv)
+{
+    for (const auto& p : pv)
+        add_parameter(p);
 }
 
 void EquationSystem::remove_parameter(const std::shared_ptr<Param<double>>& p)
@@ -77,7 +94,7 @@ bool EquationSystem::is_converged(bool check_drag, bool print_non_converged /* =
 
         if (print_non_converged)
         {
-            std::cout << "Not converged: " + equations[i]->to_string();
+            std::cout << "Not converged: " + equations[i]->to_string() << "\n";
             continue;
             // continue; ???
         }
@@ -254,7 +271,9 @@ EquationSystem::solve_by_substitution()
     {
         auto& eq = equations[i];
         if (!eq->is_substitution_form())
+        {
             continue;
+        }
         auto a = eq->get_substitution_param_a();
         auto b = eq->get_substitution_param_b();
         if (std::abs(a->value() - b->value()) > GaussianMethod::epsilon)
@@ -306,31 +325,68 @@ SolveResult EquationSystem::solve()
             return SolveResult.POSTPONE;
         }
         */
+
         if (is_converged(is_drag_step))
         {
             if (steps > 0)
             {
                 dof_changed = true;
-                // Debug.Log(String.Format("solved {0} equations with {1} unknowns in {2} steps",
-                // equations.Count, currentParams.Count, steps));
+                std::cout << "Solved " << equations.size() << " equations with "
+                          << current_params.size() << " unknowns in " << steps << " steps.\n";
             }
             stats += "eqs: " + std::to_string(equations.size())
                      + "\nnunkn: " + std::to_string(current_params.size());
             back_substitution(subs);
+            if (DEBUG)
+            {
+                for (std::size_t i = 0; i < J.shape(0); ++i)
+                {
+                    for (std::size_t j = 0; j < J.shape(1); ++j)
+                        std::cout << J(i, j)->to_string() << ", ";
+                    std::cout << "\n";
+                }
+
+                std::cout << "Params: \n";
+                for (int i = 0; i < current_params.size(); i++)
+                {
+                    std::cout << current_params[i]->to_string() << std::endl;
+                }
+            }
+
             return SolveResult::OKAY;
         }
         eval_jacobian(J, A, !is_drag_step);
         solve_least_squares(A, B, X);
+
         for (int i = 0; i < current_params.size(); i++)
         {
-            current_params[i]->set_value(current_params[i]->value() - X[i]);
+            current_params[i]->set_value(current_params[i]->value() - X(i));
         }
     } while (steps++ <= max_steps);
+
+    if (DEBUG)
+    {
+        for (std::size_t i = 0; i < J.shape(0); ++i)
+        {
+            for (std::size_t j = 0; j < J.shape(1); ++j)
+                std::cout << J(i, j)->to_string() << ", ";
+            std::cout << "\n";
+        }
+
+        std::cout << "Params: \n";
+        for (int i = 0; i < current_params.size(); i++)
+        {
+            std::cout << current_params[i]->to_string() << std::endl;
+        }
+    }
+
     is_converged(false, true);
+
     if (revert_when_not_converged)
     {
         revert_params();
         dof_changed = false;
     }
+
     return SolveResult::DIDNT_CONVERGE;
 }

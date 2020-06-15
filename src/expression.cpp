@@ -71,35 +71,35 @@ std::shared_ptr<Expr> operator/(const std::shared_ptr<Expr>& a, const std::share
 
 std::shared_ptr<Expr> sin(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Sin, x, nullptr);
+    return std::make_shared<Expr>(Op::Sin, x);
 }
 std::shared_ptr<Expr> cos(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Cos, x, nullptr);
+    return std::make_shared<Expr>(Op::Cos, x);
 }
 std::shared_ptr<Expr> acos(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::ACos, x, nullptr);
+    return std::make_shared<Expr>(Op::ACos, x);
 }
 std::shared_ptr<Expr> asin(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::ASin, x, nullptr);
+    return std::make_shared<Expr>(Op::ASin, x);
 }
 std::shared_ptr<Expr> sqrt(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Sqrt, x, nullptr);
+    return std::make_shared<Expr>(Op::Sqrt, x);
 }
 std::shared_ptr<Expr> sqr(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Sqr, x, nullptr);
+    return std::make_shared<Expr>(Op::Sqr, x);
 }
 std::shared_ptr<Expr> abs(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Abs, x, nullptr);
+    return std::make_shared<Expr>(Op::Abs, x);
 }
 std::shared_ptr<Expr> sign(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Sign, x, nullptr);
+    return std::make_shared<Expr>(Op::Sign, x);
 }
 std::shared_ptr<Expr> atan2(const std::shared_ptr<Expr>& x, const std::shared_ptr<Expr>& y)
 {
@@ -107,23 +107,23 @@ std::shared_ptr<Expr> atan2(const std::shared_ptr<Expr>& x, const std::shared_pt
 }
 std::shared_ptr<Expr> expo(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Exp, x, nullptr);
+    return std::make_shared<Expr>(Op::Exp, x);
 }
 std::shared_ptr<Expr> sinh(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Sinh, x, nullptr);
+    return std::make_shared<Expr>(Op::Sinh, x);
 }
 std::shared_ptr<Expr> cosh(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::Cosh, x, nullptr);
+    return std::make_shared<Expr>(Op::Cosh, x);
 }
 std::shared_ptr<Expr> sfres(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::SFres, x, nullptr);
+    return std::make_shared<Expr>(Op::SFres, x);
 }
 std::shared_ptr<Expr> cfres(const std::shared_ptr<Expr>& x)
 {
-    return std::make_shared<Expr>(Op::CFres, x, nullptr);
+    return std::make_shared<Expr>(Op::CFres, x);
 }
 
 
