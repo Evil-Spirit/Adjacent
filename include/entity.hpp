@@ -8,169 +8,215 @@
 
 using ExpVectorPtr = std::shared_ptr<ExpVector>;
 
-class Entity {
+class Entity
+{
 public:
-	// virtual std::shared_ptr<ExpVector> get_points() = 0;
-	// virtual std::shared_ptr<ExpVector> get_segments() = 0;
-	virtual	std::string to_string() = 0; 
-	virtual ExpVectorPtr point_on(const ExprPtr& t) = 0;
-	virtual ExpVectorPtr tangent_at(const ExprPtr& t) = 0;
-	virtual ExprPtr length() = 0;
-	virtual ExprPtr radius() = 0;
+    // virtual std::shared_ptr<ExpVector> get_points() = 0;
+    // virtual std::shared_ptr<ExpVector> get_segments() = 0;
+    virtual std::string to_string() = 0;
+    virtual ExpVectorPtr point_on(const ExprPtr& t) = 0;
+    virtual ExpVectorPtr tangent_at(const ExprPtr& t) = 0;
+    virtual ExprPtr length() = 0;
+    virtual ExprPtr radius() = 0;
 
     virtual std::vector<ParamPtr> parameters() = 0;
     // virtual std::vector<ExprPtr> equations() = 0;
-	// virtual ExpVectorPtr center() = 0;
+    // virtual ExpVectorPtr center() = 0;
 };
 
-class PointE : public Entity {
+class PointE : public Entity
+{
 public:
-	ParamPtr x, y, z;
-	std::shared_ptr<ExpVector> exp_;
+    ParamPtr x, y, z;
+    std::shared_ptr<ExpVector> exp_;
 
-	PointE() = default;
-	PointE(const ParamPtr& x, const ParamPtr& y, const ParamPtr& z) :
-		x(x), y(y), z(z)
-	{
-	}
+    PointE() = default;
+    PointE(const ParamPtr& x, const ParamPtr& y, const ParamPtr& z)
+        : x(x)
+        , y(y)
+        , z(z)
+    {
+    }
 
-	// PointE& PointE(const PointE&) = default;
+    // PointE& PointE(const PointE&) = default;
 
-	std::string to_string()
-	{
-		return "Point(" + x->to_string() + ", " + y->to_string() + ", " + z->to_string() + ")";
-	}
+    std::string to_string()
+    {
+        return "Point(" + x->to_string() + ", " + y->to_string() + ", " + z->to_string() + ")";
+    }
 
-	ExpVector expr() {
-		if (exp_ == nullptr) {
-			exp_ = std::make_shared<ExpVector>(x->expr(), y->expr(), z->expr());
-		}
-		// TODO transform
-		return *exp_;
-	}
+    ExpVector expr()
+    {
+        if (exp_ == nullptr)
+        {
+            exp_ = std::make_shared<ExpVector>(x->expr(), y->expr(), z->expr());
+        }
+        // TODO transform
+        return *exp_;
+    }
 
-	bool is_changed() {
-		return x->m_changed || y->m_changed || z->m_changed;
-	}
+    bool is_changed()
+    {
+        return x->m_changed || y->m_changed || z->m_changed;
+    }
 
-	std::vector<ParamPtr> parameters() {
-		if (is_3d())
-		{
-			return {x, y, z};
-		}
-		return {x, y};
-	}
+    std::vector<ParamPtr> parameters()
+    {
+        if (is_3d())
+        {
+            return { x, y, z };
+        }
+        return { x, y };
+    }
 
-	// points()
+    // points()
 
-	bool is_3d() {
-		return false;
-	}
+    bool is_3d()
+    {
+        return false;
+    }
 
-	void on_drag(const xt::xtensor<double, 1>& delta) {
-		x->set_value(x->value() + delta[0]);
-		y->set_value(y->value() + delta[1]);
-		if (is_3d()) {
-			z->set_value(z->value() + delta[2]);
-		}
-	}
-	
-	std::shared_ptr<ExpVector> tangent_at(const ExprPtr&) {
-		return nullptr;
-	}
+    void on_drag(const xt::xtensor<double, 1>& delta)
+    {
+        x->set_value(x->value() + delta[0]);
+        y->set_value(y->value() + delta[1]);
+        if (is_3d())
+        {
+            z->set_value(z->value() + delta[2]);
+        }
+    }
 
-	ExpVectorPtr point_on(const ExprPtr&) { return std::make_shared<ExpVector>(expr()); }	
-	ExprPtr length() { return nullptr; }	
-	ExprPtr radius() { return nullptr; }	
+    std::shared_ptr<ExpVector> tangent_at(const ExprPtr&)
+    {
+        return nullptr;
+    }
+
+    ExpVectorPtr point_on(const ExprPtr&)
+    {
+        return std::make_shared<ExpVector>(expr());
+    }
+    ExprPtr length()
+    {
+        return nullptr;
+    }
+    ExprPtr radius()
+    {
+        return nullptr;
+    }
 };
 
-class CircleE : public Entity {
+class CircleE : public Entity
+{
 public:
+    PointE center;
+    ParamPtr _radius;
 
-	PointE center;
-	ParamPtr _radius;
+    CircleE()
+    {
+    }
 
-	CircleE() {
+    std::vector<ParamPtr> parameters()
+    {
+        std::vector<ParamPtr> res = center.parameters();
+        res.push_back(_radius);
+        return res;
+    }
 
-	}
+    std::string to_string()
+    {
+        return "Circle(" + center.to_string() + ", " + _radius->to_string() + ")";
+    }
 
-	std::vector<ParamPtr> parameters() {
-		std::vector<ParamPtr> res = center.parameters();
-		res.push_back(_radius);
-		return res;
-	}
+    ExpVectorPtr tangent_at(const ExprPtr& t)
+    {
+        auto angle = t * PI2_E;
+        return std::make_shared<ExpVector>(-sin(angle), cos(angle), zero);
+    }
 
-	std::string to_string() {
-		return "Circle(" + center.to_string() + ", " + _radius->to_string() + ")";
-	}
+    ExprPtr radius()
+    {
+        return abs(_radius->expr());
+    }
 
-	ExpVectorPtr tangent_at(const ExprPtr& t) {
-		auto angle = t * PI2_E;
-		return std::make_shared<ExpVector>(-sin(angle), cos(angle), zero);
-	}
+    ExprPtr length()
+    {
+        return PI2_E * radius();
+    }
 
-	ExprPtr radius() {
-		return abs(_radius->expr());
-	}
-
-	ExprPtr length() {
-		return PI2_E * radius();
-	}
-
-	ExpVectorPtr point_on(const ExprPtr& t) {
-		auto angle = t * PI2_E;
-		return std::make_shared<ExpVector>(center.expr() + ExpVector(cos(angle), sin(angle), zero) * radius());
-	}
-
+    ExpVectorPtr point_on(const ExprPtr& t)
+    {
+        auto angle = t * PI2_E;
+        return std::make_shared<ExpVector>(center.expr()
+                                           + ExpVector(cos(angle), sin(angle), zero) * radius());
+    }
 };
 
-class SegmentaryEntity {
-	virtual PointE& source() = 0;
-	virtual PointE& target() = 0;
+class SegmentaryEntity
+{
+    virtual PointE& source() = 0;
+    virtual PointE& target() = 0;
 };
 
-class LineE : public Entity, public SegmentaryEntity {
+class LineE
+    : public Entity
+    , public SegmentaryEntity
+{
 public:
-	PointE p0, p1;
+    PointE p0, p1;
 
-	LineE(const PointE& p0, const PointE& p1) : p0(p0), p1(p1)
-	{
-	}
+    LineE(const PointE& p0, const PointE& p1)
+        : p0(p0)
+        , p1(p1)
+    {
+    }
 
-	std::vector<ParamPtr> parameters() {
-		std::vector<ParamPtr> res = p0.parameters();
-		std::vector<ParamPtr> p1_p = p1.parameters();
+    std::vector<ParamPtr> parameters()
+    {
+        std::vector<ParamPtr> res = p0.parameters();
+        std::vector<ParamPtr> p1_p = p1.parameters();
 
-		copy(p1_p.begin(), p1_p.end(), back_inserter(res));
-		return res;
-	}
+        copy(p1_p.begin(), p1_p.end(), back_inserter(res));
+        return res;
+    }
 
-	bool is_changed() {
-		return p0.is_changed() || p1.is_changed();
-	}
+    bool is_changed()
+    {
+        return p0.is_changed() || p1.is_changed();
+    }
 
-	PointE& source() { return p0; }
-	PointE& target() { return p1; }
+    PointE& source()
+    {
+        return p0;
+    }
+    PointE& target()
+    {
+        return p1;
+    }
 
-	std::string to_string() {
-		return std::string("Line(") + p0.to_string() + " -> " + p1.to_string() + ")";
-	}
+    std::string to_string()
+    {
+        return std::string("Line(") + p0.to_string() + " -> " + p1.to_string() + ")";
+    }
 
-	ExpVectorPtr point_on(const ExprPtr& t) {
-		return std::make_shared<ExpVector>(p0.expr() + (p1.expr() - p0.expr()) * t);
-	}
+    ExpVectorPtr point_on(const ExprPtr& t)
+    {
+        return std::make_shared<ExpVector>(p0.expr() + (p1.expr() - p0.expr()) * t);
+    }
 
-	ExpVectorPtr tangent_at(const ExprPtr& t) {
-		return std::make_shared<ExpVector>(p1.expr() - p0.expr());
-	}
+    ExpVectorPtr tangent_at(const ExprPtr& t)
+    {
+        return std::make_shared<ExpVector>(p1.expr() - p0.expr());
+    }
 
-	ExprPtr length() {
-		return (p1.expr() - p0.expr()).magnitude();
-	}
+    ExprPtr length()
+    {
+        return (p1.expr() - p0.expr()).magnitude();
+    }
 
-	ExprPtr radius() {
-		return nullptr;
-	}
+    ExprPtr radius()
+    {
+        return nullptr;
+    }
 };
 
 #endif

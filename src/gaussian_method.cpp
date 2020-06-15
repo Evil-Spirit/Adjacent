@@ -48,8 +48,7 @@ int GaussianMethod::rank(xt::xtensor<double, 2> A)
 }
 
 // copy A & B so they don't get overwritten
-void GaussianMethod::solve(xt::xtensor<double, 2> A, 
-                           xt::xtensor<double, 1> B,
+void GaussianMethod::solve(xt::xtensor<double, 2> A, xt::xtensor<double, 1> B,
                            xt::xtensor<double, 1>& X)
 {
     std::ptrdiff_t rows = A.shape(0);

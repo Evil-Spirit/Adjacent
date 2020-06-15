@@ -12,7 +12,8 @@ constexpr bool DEBUG = true;
 
 void EquationSystem::add_equation(const std::shared_ptr<Expr>& eq)
 {
-    if (DEBUG) std::cout << "Adding equation: " << eq->to_string() << std::endl;
+    if (DEBUG)
+        std::cout << "Adding equation: " << eq->to_string() << std::endl;
     source_equations.push_back(eq);
     is_dirty = true;
 }
@@ -330,10 +331,11 @@ SolveResult EquationSystem::solve()
             if (steps > 0)
             {
                 dof_changed = true;
-                std::cout << "Solved " << equations.size() << " equations with " << current_params.size() << " unknowns in " << steps << " steps.\n";
+                std::cout << "Solved " << equations.size() << " equations with "
+                          << current_params.size() << " unknowns in " << steps << " steps.\n";
             }
-            stats += "eqs: " + std::to_string(equations.size()) +
-                     "\nnunkn: " + std::to_string(current_params.size());
+            stats += "eqs: " + std::to_string(equations.size())
+                     + "\nnunkn: " + std::to_string(current_params.size());
             back_substitution(subs);
             if (DEBUG)
             {

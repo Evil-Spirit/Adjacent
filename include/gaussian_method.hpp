@@ -14,8 +14,7 @@ public:
     static int rank(xt::xtensor<double, 2> A);
 
     // copy A & B so they don't get overwritten
-    static void solve(xt::xtensor<double, 2> A,
-    				  xt::xtensor<double, 1> B,
+    static void solve(xt::xtensor<double, 2> A, xt::xtensor<double, 1> B,
                       xt::xtensor<double, 1>& X);
 };
 
