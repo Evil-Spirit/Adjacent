@@ -144,7 +144,6 @@ public:
             bestI = value->value();
             min = cur_value;
         }
-        std::cout << "value : " << bestI << std::endl;
         value->set_value(bestI);
         return true;
     }
@@ -161,7 +160,6 @@ public:
     }
 };
 
-
 ExprPtr angle2d(const ExpVector& d0, const ExpVector& d1, bool angle360 = false)
 {
     auto nu = d1.x * d0.x + d1.y * d0.y;
@@ -171,20 +169,21 @@ ExprPtr angle2d(const ExpVector& d0, const ExpVector& d1, bool angle360 = false)
     return atan2(nv, nu);
 }
 
-class Parallel : public Constraint
+class ParallelConstraint : public Constraint
 {
+public:
     enum Option
     {
         Codirected,
         Antidirected
     };
 
-    Option option_;
+    Option option_ = Option::Codirected;
 
     ExprPtr angle;
     std::shared_ptr<Entity> l0, l1;
 
-    Parallel(std::shared_ptr<Entity> l0, std::shared_ptr<Entity> l1)
+    ParallelConstraint(std::shared_ptr<LineE>& l0, std::shared_ptr<LineE>& l1)
         : Constraint(CONSTRAINT_TYPE::Parallel)
         , l0(l0)
         , l1(l1)
@@ -210,9 +209,9 @@ class Parallel : public Constraint
         switch (option_)
         {
             case Option::Codirected:
-                return std::vector<ExprPtr>({ angle });
+                return { angle };
             case Option::Antidirected:
-                return std::vector<ExprPtr>({ abs(angle) - PI_E });
+                return { abs(angle) - PI_E };
         }
         throw std::runtime_error("unhandled option");
     }
@@ -232,6 +231,7 @@ class Parallel : public Constraint
             }
             std::clog << "check option " << i << " (min: " << min_value << ", cur: " << cur_value
                       << ")\n";
+
             if (min_value < 0.0 || cur_value < min_value)
             {
                 min_value = cur_value;
@@ -239,6 +239,11 @@ class Parallel : public Constraint
                 option_ = (Option) i;
             }
         }
+    }
+
+    std::vector<ParamPtr> parameters()
+    {
+        return {};
     }
 };
 
@@ -291,7 +296,6 @@ public:
     {
         return {};
     }
-
 
     std::shared_ptr<PointE>& get_other_point(const std::shared_ptr<PointE>& p)
     {
@@ -404,29 +408,16 @@ public:
     }
 };
 
+template <class T>
+T sgn(const T& x)
+{
+    return (x < T(0)) ? T(-1) : T(+1);
+}
+
 class AngleConstraint : public ValueConstraint
 {
 public:
     bool supplementary = false;
-
-    void set_supplementary(bool sup)
-    {
-        if (sup == supplementary)
-        {
-            return;
-        }
-        supplementary = sup;
-        if (false)  // arc == TODO!
-        {
-            value->set_value(2.0 * M_PI - value->value());
-        }
-        else
-        {
-            value->set_value(-sign(value->value()) * M_PI - value->value());
-        }
-        // mark dirty!
-    }
-
     // AngleConstraint(PointE)
 
     // AngleConstraint(Arc);
@@ -436,12 +427,21 @@ public:
     {
         entities.push_back(l0.get());
         entities.push_back(l1.get());
-        satisfy();
+        // satisfy();
         value->set_value(angle);
     }
 
     std::vector<ExprPtr> equations()
     {
+        if (std::abs(value->value()) > M_PI_2)
+        {
+            // If we have values > pi/2 it's better to flip the computation of the angle
+            // so that atan2 doesn't go too high (becomes unstable for solving at around 0.92 * PI)
+            // atan2 is only defined between 0 and +/- PI
+            // so we flip the line segment, and use the negative angle instead.
+            supplementary = true;
+            value->set_value(-(sgn(value->value()) * M_PI - value->value()));
+        }
         auto pts = get_points();
         auto d0 = pts[0] - pts[1];
         auto d1 = pts[3] - pts[2];
@@ -466,13 +466,14 @@ public:
         else if (true)  // line
         {
             LineE* l0 = dynamic_cast<LineE*>(entities[0]);
-            res[0] = l0->source().expr();
-            res[1] = l0->target().expr();
+            res[0] = *l0->point_on(zero);
+            res[1] = *l0->point_on(one);
             LineE* l1 = dynamic_cast<LineE*>(entities[1]);
-            res[2] = l1->source().expr();
-            res[3] = l1->target().expr();
+            res[2] = *l1->point_on(zero);
+            res[3] = *l1->point_on(one);
             if (supplementary)
             {
+                // Swap direction of l1
                 std::swap(res[2], res[3]);
             }
         }

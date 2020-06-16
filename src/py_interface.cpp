@@ -81,6 +81,9 @@ PYBIND11_MODULE(adjacent_api, m)
         .def(py::init<std::shared_ptr<PointE>, std::shared_ptr<PointE>, HVOrientation>())
         .def(py::init<std::shared_ptr<LineE>, HVOrientation>());
 
+    py::class_<ParallelConstraint, Constraint, std::shared_ptr<ParallelConstraint>>(sub, "Parallel")
+        .def(py::init<std::shared_ptr<LineE>&, std::shared_ptr<LineE>&>());
+
     py::class_<Expr, std::shared_ptr<Expr>>(m, "Expr")
         // .def(py::init<>())
         .def(py::init<double>())

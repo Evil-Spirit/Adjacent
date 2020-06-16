@@ -8,7 +8,7 @@
 #include "gaussian_method.hpp"
 #include "equation_system.hpp"
 
-constexpr bool DEBUG = true;
+constexpr bool DEBUG = false;
 
 void EquationSystem::add_equation(const std::shared_ptr<Expr>& eq)
 {
@@ -46,6 +46,8 @@ void EquationSystem::remove_equation(const std::shared_ptr<Expr>& eq)
 
 void EquationSystem::add_parameter(const std::shared_ptr<Param<double>>& p)
 {
+    if (DEBUG)
+        std::cout << "Adding Parameter: " << p->to_string() << std::endl;
     parameters.push_back(p);
     is_dirty = true;
 }
@@ -58,6 +60,8 @@ void EquationSystem::add_parameters(const std::vector<ParamPtr>& pv)
 
 void EquationSystem::remove_parameter(const std::shared_ptr<Param<double>>& p)
 {
+    if (DEBUG)
+        std::cout << "Removing Parameter " << p->to_string() << std::endl;
     auto it = std::find(parameters.begin(), parameters.end(), p);
     if (it == parameters.end())
     {
@@ -132,6 +136,12 @@ xt::xtensor<std::shared_ptr<Expr>, 2> EquationSystem::write_jacobian(
         {
             const auto& u = parameters[c];
             J(r, c) = eq->derivative(u);
+
+            if (DEBUG)
+                std::cout << "Equation: " << eq->to_string() << "\n"
+                          << "Derived by " << u->to_string() << "\n\n"
+                          << J(r, c)->to_string() << "\n\n";
+
             /*
             if(!J[r, c].IsZeroConst()) {
                 Debug.Log(J[r, c].ToString() + "\n");
@@ -266,7 +276,8 @@ std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>
 EquationSystem::solve_by_substitution()
 {
     std::unordered_map<std::shared_ptr<Param<double>>, std::shared_ptr<Param<double>>> subs;
-
+    if (DEBUG)
+        std::cout << "Solving by substitution" << std::endl;
     for (std::size_t i = 0; i < equations.size(); i++)
     {
         auto& eq = equations[i];
