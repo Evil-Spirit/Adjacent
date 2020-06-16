@@ -1,6 +1,7 @@
 #include <string>
 #include <memory>
 #include <cmath>
+#include <iostream>
 
 #include "expression.hpp"
 
@@ -447,6 +448,8 @@ std::shared_ptr<Param<double>> Expr::get_substitution_param_b() const
 
 void Expr::substitute(std::shared_ptr<Param<double>>& pa, std::shared_ptr<Param<double>>& pb)
 {
+    // if (DEBUG) std::cout << "Substituting: " << pa->to_string() << " with " << pb->to_string() <<
+    // std::endl;
     if (a != nullptr)
     {
         a->substitute(pa, pb);

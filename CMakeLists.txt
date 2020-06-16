@@ -5,8 +5,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BUILD_PYTHON_BINDINGS "Build Python bindings" ON)
 
-# set(PYTHON_EXECUTABLE /home/wolfv/miniconda3/bin/python)
-# set(PYTHON_LIBRARIES /home/wolfv/miniconda3/lib/)
+set(PYTHON_EXECUTABLE $ENV{CONDA_PREFIX}/bin/python)
+set(PYTHON_LIBRARIES $ENV{CONDA_PREFIX}/lib/)
 
 find_package(xtl REQUIRED)
 find_package(xtensor REQUIRED)
