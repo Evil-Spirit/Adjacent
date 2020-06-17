@@ -48,6 +48,10 @@ void EquationSystem::add_parameter(const std::shared_ptr<Param<double>>& p)
 {
     if (DEBUG)
         std::cout << "Adding Parameter: " << p->to_string() << std::endl;
+    if (std::find(parameters.begin(), parameters.end(), p) != parameters.end())
+    {
+        return;
+    }
     parameters.push_back(p);
     is_dirty = true;
 }

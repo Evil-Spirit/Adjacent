@@ -42,6 +42,12 @@ PYBIND11_MODULE(adjacent_api, m)
         // .def("expr", &LineE::expr)
         .def("__repr__", &LineE::to_string);
 
+    py::class_<CircleE, Entity, std::shared_ptr<CircleE>>(m, "Circle")
+        .def(py::init<PointE, ParamPtr>())
+        .def("center", &CircleE::center)
+        .def("radius", &CircleE::radius)
+        .def("__repr__", &CircleE::to_string);
+
     py::module sub = m.def_submodule("constraints");
 
     py::class_<Constraint, std::shared_ptr<Constraint>>(sub, "Constraint");
@@ -69,9 +75,13 @@ PYBIND11_MODULE(adjacent_api, m)
 
     py::class_<AngleConstraint, ValueConstraint, Constraint, std::shared_ptr<AngleConstraint>>(
         sub, "Angle")
-        .def(py::init<std::shared_ptr<LineE>&, std::shared_ptr<LineE>&, double>())
-        // .def(py::init<EntityPtr, double>())
-        ;
+        .def(py::init<std::shared_ptr<LineE>&, std::shared_ptr<LineE>&, double>());
+
+    py::class_<DiameterConstraint,
+               ValueConstraint,
+               Constraint,
+               std::shared_ptr<DiameterConstraint>>(sub, "Diameter")
+        .def(py::init<std::shared_ptr<Entity>&, double>());
 
     py::enum_<HVOrientation>(sub, "HVOrientation")
         .value("OX", HVOrientation::OX)
@@ -84,8 +94,10 @@ PYBIND11_MODULE(adjacent_api, m)
     py::class_<ParallelConstraint, Constraint, std::shared_ptr<ParallelConstraint>>(sub, "Parallel")
         .def(py::init<std::shared_ptr<LineE>&, std::shared_ptr<LineE>&>());
 
+    py::class_<TangentConstraint, Constraint, std::shared_ptr<TangentConstraint>>(sub, "Tangent")
+        .def(py::init<std::shared_ptr<CircleE>&, std::shared_ptr<LineE>&>());
+
     py::class_<Expr, std::shared_ptr<Expr>>(m, "Expr")
-        // .def(py::init<>())
         .def(py::init<double>())
         .def("eval", &Expr::eval)
         .def("__str__", &Expr::to_string)
