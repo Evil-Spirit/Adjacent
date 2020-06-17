@@ -17,7 +17,8 @@ enum CONSTRAINT_TYPE
     PointsDistance,
     HV,
     Angle,
-    Diameter
+    Diameter,
+    Tangent
 };
 
 class Constraint;
@@ -433,6 +434,7 @@ public:
 
     std::vector<ExprPtr> equations()
     {
+        std::array<ExpVector, 4> pts;
         if (std::abs(value->value()) > M_PI_2)
         {
             // If we have values > pi/2 it's better to flip the computation of the angle
@@ -441,8 +443,14 @@ public:
             // so we flip the line segment, and use the negative angle instead.
             supplementary = true;
             value->set_value(-(sgn(value->value()) * M_PI - value->value()));
+            pts = get_points(true);
         }
-        auto pts = get_points();
+        else
+        {
+            // value->set_value(value->value());
+            pts = get_points(false);
+        }
+
         auto d0 = pts[0] - pts[1];
         auto d1 = pts[3] - pts[2];
         // bool angle360 = is_arc?
@@ -452,9 +460,9 @@ public:
         return { angle - value->expr() };
     }
 
-    std::vector<ExpVector> get_points()
+    std::array<ExpVector, 4> get_points(bool swap)
     {
-        std::vector<ExpVector> res(4);
+        std::array<ExpVector, 4> res;
 
         if (false)  // points
         {
@@ -485,18 +493,20 @@ public:
     }
 };
 
-class Diameter : public ValueConstraint
+class DiameterConstraint : public ValueConstraint
 {
 public:
     // bool showAsRadius = false;
     EntityPtr e;
 
-    Diameter(EntityPtr c)
-        : ValueConstraint(CONSTRAINT_TYPE::Diameter)
+    DiameterConstraint(EntityPtr& entity, double diameter)
+        : ValueConstraint(CONSTRAINT_TYPE::Diameter, diameter)
+        , e(entity)
     {
         // showAsRadius = (c.type == IEntityType.Arc);
-        entities.push_back(c.get());
-        satisfy();
+        entities.push_back(entity.get());
+        // satisfy();
+        value->set_value(diameter);
     }
 
     std::vector<ExprPtr> equations()
@@ -505,18 +515,56 @@ public:
     }
 };
 
-class Tangent : public Constraint
+class TangentConstraint : public Constraint
 {
+public:
     enum Option
     {
         Codirected,
-        AntiDirected
+        Antidirected
     };
 
-    Option option;
+    Option _option = Option::Codirected;
+
+    void choose_best_option()
+    {
+        double min_value = -1.0;
+        int best_option = 0;
+
+        for (int i = 0; i < 2; i++)
+        {
+            auto exprs = equations();
+            double cur_value = 0.0;
+            for (const auto& el : exprs)
+            {
+                cur_value += abs(el->eval());
+            }
+            std::clog << "check option " << i << " (min: " << min_value << ", cur: " << cur_value
+                      << ")\n";
+
+            if (min_value < 0.0 || cur_value < min_value)
+            {
+                min_value = cur_value;
+                best_option = i;
+                _option = (Option) i;
+            }
+        }
+    }
 
     ParamPtr t0 = param("t0", 0.0);
     ParamPtr t1 = param("t1", 0.0);
+
+    bool add_angle = true;
+
+    TangentConstraint(std::shared_ptr<CircleE>& c, std::shared_ptr<LineE>& l)
+        : Constraint(CONSTRAINT_TYPE::Tangent)
+    {
+        // make sure that e1 is circular entity?
+        entities.push_back(c.get());
+        entities.push_back(l.get());
+
+        choose_best_option();
+    }
 
     bool is_coincident(double& tv0, double& tv1, ExprPtr& c, ParamPtr& p)
     {
@@ -526,17 +574,32 @@ class Tangent : public Constraint
         auto* s0 = dynamic_cast<SegmentaryEntity*>(l0);
         auto* s1 = dynamic_cast<SegmentaryEntity*>(l1);
 
+        // For the is_coincident_with_curve query we need to have access to all constraints to query
+        // wether there is a coincident with ... constraint already
+
         // if(s0 != nullptr && s1 != nullptr) {
-        //    if (s0->begin->IsCoincidentWith(s1.begin))    { tv0 = 0.0; tv1 = 0.0; return true; }
+        //    if (s0->begin->IsCoincidentWith(s1.begin))   { tv0 = 0.0; tv1 = 0.0; return true; }
         //     if (s0.begin.IsCoincidentWith(s1.end))      { tv0 = 0.0; tv1 = 1.0; return true; }
         //     if (s0.end.IsCoincidentWith(s1.begin))      { tv0 = 1.0; tv1 = 0.0; return true; }
         //     if (s0.end.IsCoincidentWith(s1.end))        { tv0 = 1.0; tv1 = 1.0; return true; }
         // }
-        // if(s0 != null) {
+        // if(s0 != nullptr)
+        // {
         //     PointOn pOn = null;
-        //     if(s0.begin.IsCoincidentWithCurve(l1, ref pOn)) { tv0 = 0.0; p = t1; c = new Exp(t1)
-        //     - pOn.GetValueParam(); return true; } if(s0.end.IsCoincidentWithCurve(l1, ref pOn))
-        //     { tv0 = 1.0; p = t1; c = new Exp(t1) - pOn.GetValueParam(); return true; }
+        //     if (s0.source().IsCoincidentWithCurve(l1, ref pOn))
+        //     {
+        //         tv0 = 0.0;
+        //         p = t1;
+        //         c = new Exp(t1) - pOn.GetValueParam();
+        //         return true;
+        //     }
+        //     if (s0.end.IsCoincidentWithCurve(l1, ref pOn))
+        //     {
+        //         tv0 = 1.0;
+        //         p = t1;
+        //         c = new Exp(t1) - pOn.GetValueParam();
+        //         return true;
+        //     }
         // }
         // if(s1 != null) {
         //     PointOn pOn = null;
@@ -555,7 +618,7 @@ class Tangent : public Constraint
         ExprPtr c = nullptr;
         ParamPtr p = nullptr;
 
-        if (is_coincident(tv0, tv1, c, p))
+        if (is_coincident(tv0, tv1, c, p) == false)
         {
             return { t0, t1 };
         }
@@ -566,6 +629,66 @@ class Tangent : public Constraint
                 return { p };
             }
         }
+        return {};
+    }
+
+    std::vector<ExprPtr> equations()
+    {
+        // select point on circle (t0) and on line (t1),
+        // force them to overlap and have equal tangent angle
+
+        std::vector<ExprPtr> res;
+        auto* l0 = entities[0];
+        auto* l1 = entities[1];
+
+        ExpVectorPtr dir0 = l0->tangent_at(t0->expr());
+        ExpVectorPtr dir1 = l1->tangent_at(t1->expr());
+
+        // dir0 = l0.plane.DirFromPlane(dir0);
+        // dir0 = sketch.plane.DirToPlane(dir0);
+
+        // dir1 = l1.plane.DirFromPlane(dir1);
+        // dir1 = sketch.plane.DirToPlane(dir1);
+
+        if (add_angle)
+        {
+            // Exp angle = sketch.is3d ? ConstraintExp.angle3d(dir0, dir1) :
+            // ConstraintExp.angle2d(dir0, dir1);
+            auto angle = angle2d(*dir0, *dir1);
+            switch (_option)
+            {
+                case Option::Codirected:
+                    res.push_back(angle);
+                    break;
+                case Option::Antidirected:
+                    res.push_back(abs(angle) - PI_E);
+                    break;
+            }
+        }
+
+        double tv0 = t0->value();
+        double tv1 = t1->value();
+
+        ExprPtr c;
+        ParamPtr p;
+
+        // if we already have a coincident constraint on P and the Curve C:
+        if (is_coincident(tv0, tv1, c, p))
+        {
+            t0->set_value(tv0);
+            t1->set_value(tv1);
+            if (c != nullptr)
+                res.push_back(c);
+        }
+        else
+        {
+            // var eq = l1.PointOnInPlane(t1, sketch.plane) - l0.PointOnInPlane(t0, sketch.plane);
+            auto eq = *l1->point_on(t1->expr()) - *l0->point_on(t0->expr());
+            res.push_back(eq.x);
+            res.push_back(eq.y);
+            // if(sketch.is3d) res.push_back(eq.z);
+        }
+        return res;
     }
 };
 

@@ -108,29 +108,36 @@ public:
 class CircleE : public Entity
 {
 public:
-    PointE center;
+    PointE _center;
     ParamPtr _radius;
 
-    CircleE()
+    CircleE(const PointE& center, const ParamPtr& radius)
+        : _center(center)
+        , _radius(radius)
     {
     }
 
     std::vector<ParamPtr> parameters()
     {
-        std::vector<ParamPtr> res = center.parameters();
+        std::vector<ParamPtr> res = _center.parameters();
         res.push_back(_radius);
         return res;
     }
 
     std::string to_string()
     {
-        return "Circle(" + center.to_string() + ", " + _radius->to_string() + ")";
+        return "Circle(" + _center.to_string() + ", " + _radius->to_string() + ")";
     }
 
     ExpVectorPtr tangent_at(const ExprPtr& t)
     {
         auto angle = t * PI2_E;
         return std::make_shared<ExpVector>(-sin(angle), cos(angle), zero);
+    }
+
+    PointE& center()
+    {
+        return _center;
     }
 
     ExprPtr radius()
@@ -146,7 +153,7 @@ public:
     ExpVectorPtr point_on(const ExprPtr& t)
     {
         auto angle = t * PI2_E;
-        return std::make_shared<ExpVector>(center.expr()
+        return std::make_shared<ExpVector>(_center.expr()
                                            + ExpVector(cos(angle), sin(angle), zero) * radius());
     }
 };
@@ -188,6 +195,7 @@ public:
     {
         return p0;
     }
+
     PointE& target()
     {
         return p1;
